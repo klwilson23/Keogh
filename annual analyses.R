@@ -12,3 +12,5 @@ steel <- subset(annual,annual$Species=="sh")
 matplot(steel$Year,steel$Abundance,type="l",lwd=steel$Stage,col=steel$Stage)
 
 plot()
+
+print(steel)
