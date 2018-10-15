@@ -44,7 +44,6 @@ plot(annual_cohort$Hatch,annual_cohort$sh/max(annual_cohort$sh,na.rm=T),xlim=c(1
 lines(steel$Year[steel$Stage_Num==3],steel$Abundance[steel$Stage_Num==3]/max(steel$Abundance[steel$Stage_Num==3],na.rm=T))
 legend("topright",c("Hatch","Smolts"),lty=c(NA,2),pch=c(21,NA),pt.bg=c("grey50",NA),col="black",bty="n")
 
-plot(annual_size$Year,annual_size$sh_s/max(annual_size$sh_s,na.rm=T),type="l",ylim=c(0,1))
 
 layout(matrix(1:4,nrow=2,byrow=T))
 par(mar=c(5,4,1,1))
@@ -52,7 +51,7 @@ sh_rec <- rep(NA, length(annual_abund$sh_s))
 
 sh_rec[grep(paste(annual_cohort$Hatch,collapse="|",sep=""),annual_abund$Year)] <- annual_cohort$sh[grep(paste(annual_abund$Year,collapse="|",sep=""),annual_cohort$Hatch)]
 
-plot(sh_rec[!is.na(sh_rec)]~annual_abund$sh_a[!is.na(sh_rec)],pch=21,bg="grey50")
+plot(sh_s~sh_a,annual_abund,pch=21,bg="grey50")
 lines(smooth.spline(annual_abund$sh_a[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],annual_abund$sh_s[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],cv=T),lwd=2,lty=2,col="dodgerblue")
 
 plot(dv_s~dv_a,data=annual_abund,pch=21,bg="grey50")
