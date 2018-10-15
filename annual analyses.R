@@ -9,6 +9,9 @@ keogh$age <- as.numeric(keogh$fresh_age)
 
 annual_age <- aggregate(number~year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
 colnames(annual_age) <- c("Year","Species","Stage","Age","Abundance")
+annual_age$Hatch <- annual_age$Year-annual_age$Age
+annual_cohorts <- aggregate(Abundance~Hatch+Species+Stage,data=annual_cohorts,FUN=sum,na.rm=T)
+
 
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
 
@@ -24,10 +27,7 @@ colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
 
 library(reshape2)
-annual_cohort <- dcast(annual_age[annual_age$Stage=="s",],Year~Species+Age,value.var="Abundance")
-sh_lag <- aggregate(Age~Year,data=annual_age[annual_age$Species=="sh"&annual_age$Stage=="s",],mean,na.rm=T)
-dv_lag <- aggregate(Age~Year,data=annual_age[annual_age$Species=="dv"&annual_age$Stage=="s",],mean,na.rm=T)
-ct_lag <- aggregate(Age~Year,data=annual_age[annual_age$Species=="ct"&annual_age$Stage=="s",],mean,na.rm=T)
+annual_cohort <- dcast(annual_cohorts[annual_cohorts$Stage=="s",],Hatch~Species,value.var="Abundance")
 
 annual_abund <- dcast(annual,Year~Species+Stage,value.var="Abundance")
 annual_size <- dcast(size,Year~Species+Stage,value.var="Length")
@@ -38,10 +38,21 @@ matplot(steel$Year,steel$Abundance,type="l",lwd=steel$Stage,col=0,xlab="Year",yl
 for(i in unique(steel$Stage_Num)){
   lines(steel$Year[steel$Stage_Num==i],steel$Abundance[steel$Stage_Num==i],lwd=2,col=i)
 }
+lines(annual_cohort$Hatch,annual_cohort$sh,lwd=2,lty=1,col="dodgerblue")
+
+plot(annual_cohort$Hatch,annual_cohort$sh/max(annual_cohort$sh,na.rm=T),xlim=c(1970,2018),ylim=c(0,1),pch=21,bg="grey50",xlab="Year",ylab="Relative abundance")
+lines(steel$Year[steel$Stage_Num==3],steel$Abundance[steel$Stage_Num==3]/max(steel$Abundance[steel$Stage_Num==3],na.rm=T))
+legend("topright",c("Hatch","Smolts"),lty=c(NA,2),pch=c(21,NA),pt.bg=c("grey50",NA),col="black",bty="n")
+
+plot(annual_size$Year,annual_size$sh_s/max(annual_size$sh_s,na.rm=T),type="l",ylim=c(0,1))
 
 layout(matrix(1:4,nrow=2,byrow=T))
 par(mar=c(5,4,1,1))
-plot(sh_s~sh_a,data=annual_abund,pch=21,bg="grey50")
+sh_rec <- rep(NA, length(annual_abund$sh_s))
+
+sh_rec[grep(paste(annual_cohort$Hatch,collapse="|",sep=""),annual_abund$Year)] <- annual_cohort$sh[grep(paste(annual_abund$Year,collapse="|",sep=""),annual_cohort$Hatch)]
+
+plot(sh_rec[!is.na(sh_rec)]~annual_abund$sh_a[!is.na(sh_rec)],pch=21,bg="grey50")
 lines(smooth.spline(annual_abund$sh_a[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],annual_abund$sh_s[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],cv=T),lwd=2,lty=2,col="dodgerblue")
 
 plot(dv_s~dv_a,data=annual_abund,pch=21,bg="grey50")
