@@ -10,7 +10,7 @@ keogh$age <- as.numeric(keogh$fresh_age)
 annual_age <- aggregate(number~year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
 colnames(annual_age) <- c("Year","Species","Stage","Age","Abundance")
 annual_age$Hatch <- annual_age$Year-annual_age$Age
-annual_cohorts <- aggregate(Abundance~Hatch+Species+Stage,data=annual_cohorts,FUN=sum,na.rm=T)
+annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Stage,data=annual_age,FUN=sum,na.rm=T)
 
 
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
@@ -27,11 +27,26 @@ colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
 
 library(reshape2)
-annual_cohort <- dcast(annual_cohorts[annual_cohorts$Stage=="s",],Hatch~Species,value.var="Abundance")
+annual_cohort <- dcast(annual_cohorts[annual_cohorts$Stage=="s",],Year~Species+as.numeric(Hatch),value.var="Abundance")
+
+annual_cohort_prop <- annual_cohort[,-1]/rowSums(annual_cohort[,-1],na.rm=T)
+
+annual_prop_sh <- annual_cohort_prop[,grep("sh",colnames(annual_cohort_prop))]
+row.names(annual_prop_sh) <- row.names(annual_cohort_prop) <- annual_cohort$Year
 
 annual_abund <- dcast(annual,Year~Species+Stage,value.var="Abundance")
 annual_size <- dcast(size,Year~Species+Stage,value.var="Length")
 annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
+
+# we want to find how many of the smolts sampled in Year X were from the spawners at Year Y
+# to do that, we find the proportions aged and multiply the current year smolts by that proportion from hatch year Y
+annual_smolts_sh <- rep(NA,length(annual_abund$Year))
+for(i in annual_abund$Year)
+{
+  i=1981
+  sum(!is.na(annual_prop_sh[,grep(i,colnames(annual_prop_sh))]))
+  annual_smolts_sh[which(annual_abund$Year==i)] <- annual_abund$sh_s[annual_abund$Year==i]*annual_cohort_prop[grep(i,row.names(annual_prop_sh)),]
+}
 
 steel <- subset(annual,annual$Species=="sh")
 matplot(steel$Year,steel$Abundance,type="l",lwd=steel$Stage,col=0,xlab="Year",ylab="Abundance")
@@ -62,3 +77,7 @@ lines(smooth.spline(annual_abund$ct_a[!is.na(annual_abund$ct_s) & !is.na(annual_
 
 plot(co_s~co_a,data=annual_abund,pch=21,bg="grey50")
 
+layout(matrix(1,nrow=1,ncol=1))
+
+cbind(annual_abund$Year,annual_abund$sh_a,sh_rec)
+plot(annual_abund$sh_a,sh_rec)
