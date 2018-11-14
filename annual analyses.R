@@ -1,10 +1,11 @@
 
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
+pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
+
 
 keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
 keogh$life_stage[keogh$life_stage=="F"] <- "f"
 keogh$life_stage[keogh$life_stage==" "] <- ""
-unique(keogh$fresh_age)
 keogh$age <- as.numeric(keogh$fresh_age)
 
 annual_age <- aggregate(number~year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
@@ -12,9 +13,7 @@ colnames(annual_age) <- c("Year","Species","Stage","Age","Abundance")
 annual_age$Hatch <- annual_age$Year-annual_age$Age
 annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Stage,data=annual_age,FUN=sum,na.rm=T)
 
-
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
-
 annual <- aggregate(number~year+species+life_stage,data=keogh,FUN=sum,na.rm=T)
 colnames(annual) <- c("Year","Species","Stage","Abundance")
 annual$Stage <- factor(annual$Stage,levels=c("f","p","s","j","a","k","","u"))
@@ -43,9 +42,7 @@ annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
 annual_smolts_sh <- rep(NA,length(annual_abund$Year))
 for(i in annual_abund$Year)
 {
-  i=1981
-  sum(!is.na(annual_prop_sh[,grep(i,colnames(annual_prop_sh))]))
-  annual_smolts_sh[which(annual_abund$Year==i)] <- annual_abund$sh_s[annual_abund$Year==i]*annual_cohort_prop[grep(i,row.names(annual_prop_sh)),]
+  annual_smolts_sh[which(annual_abund$Year==i)] <- sum(annual_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[!is.na(annual_prop_sh[,grep(i,colnames(annual_prop_sh))])],"$",collapse="|",sep=""),annual_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))],na.rm=T)
 }
 
 steel <- subset(annual,annual$Species=="sh")
