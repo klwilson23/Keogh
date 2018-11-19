@@ -57,7 +57,10 @@ for(i in annual_sh_abund$Year)
 stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
 
-plot(stock_rec$Adults,stock_rec$Smolts)
+plot(stock_rec$Adults,stock_rec$Smolts,xlab="Adults",ylab="Smolts")
+lines(smooth.spline(stock_rec$Adults[!is.na(stock_rec$Smolts)],stock_rec$Smolts[!is.na(stock_rec$Smolts)],cv=T),lwd=2,lty=2,col="dodgerblue")
+
+
 matplot(stock_rec[,2:3],type="l")
 
 steel <- subset(annual,annual$Species=="sh")
