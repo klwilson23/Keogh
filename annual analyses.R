@@ -7,14 +7,20 @@ keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbre
 keogh$life_stage[keogh$life_stage=="F"] <- "f"
 keogh$life_stage[keogh$life_stage==" "] <- ""
 keogh$age <- as.numeric(keogh$fresh_age)
+keogh$age_ocean <- as.numeric(keogh$ocean_age)
+keogh$age_ocean[keogh$life_stage=="s"] <- 0
+keogh$hatch_year <- keogh$year-(keogh$age-keogh$age_ocean)
 
-annual_age <- aggregate(number~year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
-colnames(annual_age) <- c("Year","Species","Stage","Age","Abundance")
-annual_age$Hatch <- annual_age$Year-annual_age$Age
-annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Stage,data=annual_age,FUN=sum,na.rm=T)
+annual_age <- aggregate(number~year+hatch_year+species+life_stage+age+age_ocean,data=keogh,FUN=sum,na.rm=T)
+colnames(annual_age) <- c("Year","Hatch","Species","Stage","Age","OceanAge","Abundance")
+annual_age <- subset(annual_age,Stage%in%c("s","a","k"))
+annual_age$Hatch <- annual_age$Year-(annual_age$Age+annual_age$OceanAge)
+annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Age,data=annual_age,FUN=sum,na.rm=T)
 
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
+
 annual <- aggregate(number~year+species+life_stage,data=keogh,FUN=sum,na.rm=T)
+
 colnames(annual) <- c("Year","Species","Stage","Abundance")
 annual$Stage <- factor(annual$Stage,levels=c("f","p","s","j","a","k","","u"))
 annual$Stage_Num <- as.numeric(annual$Stage)
@@ -26,7 +32,7 @@ colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
 
 library(reshape2)
-annual_cohort <- dcast(annual_cohorts[annual_cohorts$Stage=="s",],Year~Species+as.numeric(Hatch),value.var="Abundance")
+annual_cohort <- dcast(annual_cohorts,Year~Species+Hatch,value.var="Abundance")
 
 annual_cohort_prop <- annual_cohort[,-1]/rowSums(annual_cohort[,-1],na.rm=T)
 
@@ -39,11 +45,20 @@ annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
 
 # we want to find how many of the smolts sampled in Year X were from the spawners at Year Y
 # to do that, we find the proportions aged and multiply the current year smolts by that proportion from hatch year Y
-annual_smolts_sh <- rep(NA,length(annual_abund$Year))
-for(i in annual_abund$Year)
+annual_sh <- subset(annual,Species=="sh")
+annual_sh_abund <- dcast(annual_sh,Year~Species+Stage,value.var="Abundance")
+annual_smolts_sh <- rep(NA,length(annual_sh_abund$Year))
+names(annual_smolts_sh) <- annual_sh_abund$Year
+for(i in annual_sh_abund$Year)
 {
-  annual_smolts_sh[which(annual_abund$Year==i)] <- sum(annual_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[!is.na(annual_prop_sh[,grep(i,colnames(annual_prop_sh))])],"$",collapse="|",sep=""),annual_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))],na.rm=T)
+  annual_smolts_sh[which(annual_sh_abund$Year==i)] <- sum(annual_sh_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),annual_sh_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
 }
+
+stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
+stock_rec$Smolts[stock_rec$Smolts==0] <- NA
+
+plot(stock_rec$Adults,stock_rec$Smolts)
+matplot(stock_rec[,2:3],type="l")
 
 steel <- subset(annual,annual$Species=="sh")
 matplot(steel$Year,steel$Abundance,type="l",lwd=steel$Stage,col=0,xlab="Year",ylab="Abundance")
