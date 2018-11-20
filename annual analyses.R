@@ -2,6 +2,7 @@
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
 
+#keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
 
 keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
 keogh$life_stage[keogh$life_stage=="F"] <- "f"
@@ -57,9 +58,15 @@ for(i in annual_sh_abund$Year)
 stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
 
-plot(stock_rec$Adults,stock_rec$Smolts,xlab="Adults",ylab="Smolts")
-lines(smooth.spline(stock_rec$Adults[!is.na(stock_rec$Smolts)],stock_rec$Smolts[!is.na(stock_rec$Smolts)],cv=T),lwd=2,lty=2,col="dodgerblue")
+plot(stock_rec$Adults,log(stock_rec$Smolts/stock_rec$Adults))
+sh_SR <- lm(log(stock_rec$Smolts/stock_rec$Adults)~stock_rec$Adults)
+abline(sh_SR)
 
+plot(stock_rec$Adults,stock_rec$Smolts,xlab="Adults",ylab="Smolts",ylim=c(0,max(stock_rec$Smolts,na.rm=T)))
+lines(smooth.spline(stock_rec$Adults[!is.na(stock_rec$Smolts)],stock_rec$Smolts[!is.na(stock_rec$Smolts)],cv=T),lwd=2,lty=2,col="dodgerblue")
+curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults))
+
+plot(stock_rec$Year,stock_rec$Adults/stock_rec$Smolts,xlab="Year",ylab="Marin survival (%)",type="b")
 
 matplot(stock_rec[,2:3],type="l")
 
