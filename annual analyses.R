@@ -1,7 +1,10 @@
 
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
+pinks <- pinks[order(pinks$Year),]
 
+pinks <- data.frame("Year"=pinks$Year,"Stock"=c(pinks$Stock[-1],NA),"Recruits"=pinks$Stock)
+plot(pinks$Stock,pinks$Recruits)
 #keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
 
 keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
@@ -66,40 +69,12 @@ plot(stock_rec$Adults,stock_rec$Smolts,xlab="Adults",ylab="Smolts",ylim=c(0,max(
 lines(smooth.spline(stock_rec$Adults[!is.na(stock_rec$Smolts)],stock_rec$Smolts[!is.na(stock_rec$Smolts)],cv=T),lwd=2,lty=2,col="dodgerblue")
 curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults))
 
+plot(pinks$Stock,pinks$Recruits)
+pk_SR <- lm(log(pinks$Recruits/pinks$Stock)~pinks$Stock)
+curve(exp(coef(pk_SR)[1])*x*exp(coef(pk_SR)[2]*x),add=T,from=0,to=max(pinks$Stock,na.rm=T))
+
 plot(stock_rec$Year,stock_rec$Adults/stock_rec$Smolts,xlab="Year",ylab="Marin survival (%)",type="b")
 
+
+
 matplot(stock_rec[,2:3],type="l")
-
-steel <- subset(annual,annual$Species=="sh")
-matplot(steel$Year,steel$Abundance,type="l",lwd=steel$Stage,col=0,xlab="Year",ylab="Abundance")
-for(i in unique(steel$Stage_Num)){
-  lines(steel$Year[steel$Stage_Num==i],steel$Abundance[steel$Stage_Num==i],lwd=2,col=i)
-}
-lines(annual_cohort$Hatch,annual_cohort$sh,lwd=2,lty=1,col="dodgerblue")
-
-plot(annual_cohort$Hatch,annual_cohort$sh/max(annual_cohort$sh,na.rm=T),xlim=c(1970,2018),ylim=c(0,1),pch=21,bg="grey50",xlab="Year",ylab="Relative abundance")
-lines(steel$Year[steel$Stage_Num==3],steel$Abundance[steel$Stage_Num==3]/max(steel$Abundance[steel$Stage_Num==3],na.rm=T))
-legend("topright",c("Hatch","Smolts"),lty=c(NA,2),pch=c(21,NA),pt.bg=c("grey50",NA),col="black",bty="n")
-
-
-layout(matrix(1:4,nrow=2,byrow=T))
-par(mar=c(5,4,1,1))
-sh_rec <- rep(NA, length(annual_abund$sh_s))
-
-sh_rec[grep(paste(annual_cohort$Hatch,collapse="|",sep=""),annual_abund$Year)] <- annual_cohort$sh[grep(paste(annual_abund$Year,collapse="|",sep=""),annual_cohort$Hatch)]
-
-plot(sh_s~sh_a,annual_abund,pch=21,bg="grey50")
-lines(smooth.spline(annual_abund$sh_a[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],annual_abund$sh_s[!is.na(annual_abund$sh_s) & !is.na(annual_abund$sh_a)],cv=T),lwd=2,lty=2,col="dodgerblue")
-
-plot(dv_s~dv_a,data=annual_abund,pch=21,bg="grey50")
-lines(smooth.spline(annual_abund$dv_a[!is.na(annual_abund$dv_s) & !is.na(annual_abund$dv_a)],annual_abund$dv_s[!is.na(annual_abund$dv_s) & !is.na(annual_abund$dv_a)],cv=F),lwd=2,lty=2,col="dodgerblue")
-
-plot(ct_s~ct_a,data=annual_abund,pch=21,bg="grey50")
-lines(smooth.spline(annual_abund$ct_a[!is.na(annual_abund$ct_s) & !is.na(annual_abund$ct_a)],annual_abund$ct_s[!is.na(annual_abund$ct_s) & !is.na(annual_abund$ct_a)],cv=F),lwd=2,lty=2,col="dodgerblue")
-
-plot(co_s~co_a,data=annual_abund,pch=21,bg="grey50")
-
-layout(matrix(1,nrow=1,ncol=1))
-
-cbind(annual_abund$Year,annual_abund$sh_a,sh_rec)
-plot(annual_abund$sh_a,sh_rec)
