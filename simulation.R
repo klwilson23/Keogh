@@ -43,14 +43,14 @@ phiE0 <- rep(1,Nspecies) # equilibrium eggs per recruit
 R0 <- rep(1e4,Nspecies) # equilibrium recruitment
 CR <- c(10,10,10,10,10) # recruitment compensation ratio for Ricker (Forrest et al. 2010 CJFAS)
 mSurv <- rep(0.3,Nspecies)
-mInits <- 1/(1+exp(-log(mSurv/(1-mSurv))))
-mar.CV <- rep(0.1,Nspecies)
+mInits <- 1/(1+exp(log((1-mSurv)/(mSurv))))
+mar.CV <- rep(0.15,Nspecies)
 
 a <- CR/phiE0
 b <- log(CR)/(R0*phiE0)
 
 alpha <- c(0,0,0,-5e-2,-1e-1) # slope in alpha through time
-marTrend <- c(0,0,-5e-3,0,0)
+marTrend <- c(0,0,2e-2,0,0) # trend in 
 
 curve(ricker(x,phiE0[1],R0[1],CR[1],0,0),from=0,to=R0[1])
 
@@ -73,12 +73,12 @@ recruits[1,] <- sapply(1:Nspecies,function(x){ricker_lin("stock"=stock[1,x],"a"=
 for(i in 2:(Nyears+1))
 {
   # do logistic regression on marine survival
-  shape <- get_beta(pmax(0,pmin(mSurv+marTrend*i,1)),mar.CV)
+  shape <- get_beta(1/(1+exp(-log((mSurv)/(1-mSurv)) + marTrend*(i-1))),mar.CV)
   mSurv.noise <- rbeta(Nspecies,shape$alpha,shape$beta)
   stock[i,] <- recruits[i-1,]*mSurv.noise
   #mnRec <- sapply(1:Nspecies,function(x){ricker("stock"=stock[i,x],"phiE0"=phiE0[x],"R0"=R0[x],"CR"=CR[x],"beta"=competition[x,],"comp"=recruits[i-1,])})
   
-  mnRec <- sapply(1:Nspecies,function(x){ricker_lin("stock"=stock[1,x],"a"=a[x],"b"=b[x],"alpha"=alpha[x],"beta"=beta[x,],"comp"=recruits[i-1,],"t"=i)})
+  mnRec <- sapply(1:Nspecies,function(x){ricker_lin("stock"=stock[i,x],"a"=a[x],"b"=b[x],"alpha"=alpha[x],"beta"=beta[x,],"comp"=recruits[i-1,],"t"=i)})
   
   recruits[i,] <- pmax(0.1,rnorm(Nspecies,mean=mnRec,sd=mnRec*recCV))
 }
@@ -101,9 +101,9 @@ layout(matrix(1))
 plot(stock[2:(Nyears+1),3]/recruits[1:Nyears,3],ylab="Marine survival",pch=21,bg="grey50")
 
 # model degrees of freedom
-df <- sum(length(a),length(b),length(alpha),length(beta)-length(diag(beta)),length(),Nspecies) # number of parameters including variance terms
+df <- sum(length(a),length(b),length(alpha),length(beta)-length(diag(beta)),length(mSurv),Nspecies) # number of parameters including variance terms
 length(recruits)/df
 
-stockRec <- list("stock"=stock,"recruits"=recruits,"Nyears"=nrow(recruits),"Nspecies"=ncol(recruits))
+stockRec <- list("stock"=stock,"recruits"=recruits,"obsRec"=recruits,"obsStock"=stock,"Nyears"=nrow(recruits),"Nspecies"=ncol(recruits))
 
 saveRDS(stockRec,"stockRec.rds")
