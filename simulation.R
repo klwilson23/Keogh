@@ -50,6 +50,7 @@ a <- CR/phiE0
 b <- log(CR)/(R0*phiE0)
 
 alpha <- c(0,0,0,-5e-2,-1e-1) # slope in alpha through time
+alpha <- c(0,0,0,0,0) # slope in alpha through time
 marTrend <- c(0,0,2e-2,0,0) # trend in 
 
 curve(ricker(x,phiE0[1],R0[1],CR[1],0,0),from=0,to=R0[1])
@@ -104,6 +105,6 @@ plot(stock[2:(Nyears+1),3]/recruits[1:Nyears,3],ylab="Marine survival",pch=21,bg
 df <- sum(length(a),length(b),length(alpha),length(beta)-length(diag(beta)),length(mSurv),Nspecies) # number of parameters including variance terms
 length(recruits)/df
 
-stockRec <- list("stock"=stock,"recruits"=recruits,"obsRec"=recruits,"obsStock"=stock,"Nyears"=nrow(recruits),"Nspecies"=ncol(recruits))
+stockRec <- list("stock"=stock,"recruits"=recruits,"Nyears"=nrow(recruits),"Nspecies"=ncol(recruits))
 
 saveRDS(stockRec,"stockRec.rds")
