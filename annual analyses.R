@@ -92,7 +92,7 @@ ct_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="ct",],FUN=su
 ct_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="ct",],FUN=sum,na.rm=T)
 CT_annual <- dcast(ct_R,year~life_stage,value.var="number")
 
-ct_lag <- 2 # range is 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal
+ct_lag <- 3 # range is 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal
 # Smith 1980 BC FLNRO suggests age 3 for Keogh River
 ct_SR <- data.frame("Year"=CT_annual$year[1:(length(CT_annual$year)-ct_lag)],"Stock"=CT_annual$a[1:(length(CT_annual$year)-ct_lag)],"Recruits"=CT_annual$s[(ct_lag+1):length(CT_annual$year)])
 
@@ -105,12 +105,13 @@ dv_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="dv",],FUN=su
 dv_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="dv",],FUN=sum,na.rm=T)
 DV_annual <- dcast(dv_R,year~life_stage,value.var="number")
 
-dv_lag <- 4 # Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
+dv_lag <- 2 # Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
 dv_SR <- data.frame("Year"=DV_annual$year[1:(length(DV_annual$year)-dv_lag)],"Stock"=DV_annual$a[1:(length(DV_annual$year)-dv_lag)],"Recruits"=DV_annual$s[(dv_lag+1):length(DV_annual$year)])
 
 plot(dv_SR$Stock,dv_SR$Recruits)
 dv_Ricker <- lm(log(dv_SR$Recruits/dv_SR$Stock)~dv_SR$Stock)
 curve(exp(coef(dv_Ricker)[1])*x*exp(coef(dv_Ricker)[2]*x),add=T,from=0,to=max(dv_SR$Stock,na.rm=T))
+
 
 # coho salmon
 co_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="co",],FUN=sum,na.rm=T)
@@ -125,7 +126,7 @@ co_Ricker <- lm(log(co_SR$Recruits/co_SR$Stock)~co_SR$Stock)
 curve(exp(coef(co_Ricker)[1])*x*exp(coef(co_Ricker)[2]*x),add=T,from=0,to=max(co_SR$Stock,na.rm=T))
 
 
-tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
+#tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
 layout(matrix(1:4,nrow=2,ncol=2,byrow=T))
 par(mar=c(4,4,1,1))
 # panel a
@@ -151,4 +152,6 @@ dv_Ricker <- lm(log(dv_SR$Recruits/dv_SR$Stock)~dv_SR$Stock)
 curve(exp(coef(dv_Ricker)[1])*x*exp(coef(dv_Ricker)[2]*x),add=T,from=0,to=max(dv_SR$Stock,na.rm=T))
 Corner_text("d)","topleft")
 
-dev.off()
+#dev.off()
+
+plot(annual_smolts_sh)

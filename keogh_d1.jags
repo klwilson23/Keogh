@@ -1,30 +1,29 @@
 model {
   
-  for(i in 1:Nyears) # the likelihood for recruitment dynamics
-  {
-    for(j in 1:Nspecies)
+  for(j in 1:Nspecies) # the likelihood for recruitment dynamics
+  { 
+    for(i in 1:Nyears)
     {
       # recruitment is a lag-1 process
-      recruits[i,j] ~ dnorm(muRec[i,j],1/pow(muRec[i,j]*rec.cv[j],2))T(0,)
-      muRec[i,j] <- a_t[i+1,j]*stock[i,j]*exp(-b_t[i+1,j]*stock[i,j])
+      recruits[i,j] ~ dnorm(recHat[i,j],1/pow(recHat[i,j]*rec.cv[j],2))T(0,)
     }
   } # end the observation portion
-  sd.la ~ dhalfcauchy(25) # variance in productivity
-  sd.b ~ dhalfcauchy(25) # variance in DD-survival slope
-  
+
   for(j in 1:Nspecies) # the regressions
   {
     rho_a[j] ~ dunif(-1,1) # autocorrelation
     rho_b[j] ~ dunif(-1,1) # autocorrelation
+    rho_Rec[j] ~ dnorm(0,1e-3)
     rec.cv[j] ~ dunif(0,0.6) # cv in recruitment
-    la_t[1,j] <- log(10)
-    a_t[1,j] <- exp(la_t[1,j])
-    b_t[1,j] <- 0.0002302585
-    for(i in 2:(Nyears+1))
+    a_t[1,j] ~ dnorm(10,1e-3)T(0,)
+    b_t[1,j] ~ dnorm(0.00023,1e-1)T(0,)
+    recHat[1,j] ~ dnorm(recruits[1,j],1/pow(recruits[1,j]*rec.cv[j],2))T(0,)
+    for(i in 2:(Nyears))
     {
-      la_t[i,j] ~ dnorm(rho_a[j]*la_t[i-1,j],1/(pow(sd.la,2)))
-      a_t[i,j] <- exp(la_t[i,j])
-      b_t[i,j] ~ dnorm(rho_b[j]*b_t[i-1,j],1/(pow(sd.b,2)))
+      log(a_t[i,j]) <- rho_a[j]*log(a_t[i-1,j])
+      b_t[i,j] <- rho_b[j]*b_t[i-1,j]
+      muRec[i,j] <-  rho_Rec[j]*recHat[i-1,j] + a_t[i,j]*stock[i,j]*exp(-b_t[i,j]*stock[i,j])
+      recHat[i,j] ~ dnorm(muRec[i,j],1/pow(muRec[i,j]*rec.cv[j],2))T(0,)
     }
   } # end the process portion
   

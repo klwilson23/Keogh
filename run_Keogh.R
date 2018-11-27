@@ -42,14 +42,13 @@ gen_ini <- function()
 
 gen_ini <- function()
 {
-  sd.la <- abs(rnorm(1,0,100)) # variance in productivity
-  sd.b <- abs(rnorm(1,0,100)) # variance in DD-survival slope
   rec.cv <- runif(Nspecies,0,0.5) # cv in recruitment
+  rho_Rec <- runif(Nspecies,-1,1)
   #b_t <- matrix(1e-3*abs(rnorm(Nspecies,0,1)),Nyears+1,Nspecies)
   #la_t <- matrix(log(abs(rnorm(Nspecies,10,1))),Nyears+1,Nspecies)
   rho_a <- runif(Nspecies,-1,1)
   rho_b <- runif(Nspecies,-1,1)
-  return(list("sd.la"=sd.la,"sd.b"=sd.b,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b))
+  return(list("rho_Rec"=rho_Rec,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b))
 }
 
 
