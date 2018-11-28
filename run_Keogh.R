@@ -8,11 +8,12 @@ dat <- readRDS("stockRec.rds")
 
 # Set up MCMC -------------------------------------------------------------
 
-nSamps <- 100
-nBurnin <- 800
-nThin <- 2
+nSamps <- 10000
+nThin <- 5
+nBurnin <- nSamps*nThin
 nChains <- 2
-nAdapt <- 1000
+nAdapt <- round(0.1*nBurnin)
+
 parcomp <- FALSE
 
 Nspecies <- dat$Nspecies
@@ -43,12 +44,15 @@ gen_ini <- function()
 gen_ini <- function()
 {
   rec.cv <- runif(Nspecies,0,0.5) # cv in recruitment
-  rho_Rec <- runif(Nspecies,-1,1)
+  rho_Rec <- runif(Nspecies,0,1)
   #b_t <- matrix(1e-3*abs(rnorm(Nspecies,0,1)),Nyears+1,Nspecies)
   #la_t <- matrix(log(abs(rnorm(Nspecies,10,1))),Nyears+1,Nspecies)
-  rho_a <- runif(Nspecies,-1,1)
-  rho_b <- runif(Nspecies,-1,1)
-  return(list("rho_Rec"=rho_Rec,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b))
+  rho_a <- runif(Nspecies,0,1)
+  rho_b <- runif(Nspecies,0,1)
+  tau.b <- 1e-3*rgamma(Nspecies,100,100) # variance in DD-survival slope
+  tau.a <- 1e-3*rgamma(Nspecies,100,100) # variance in alpha
+  
+  return(list("rho_Rec"=rho_Rec,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b,"tau.b"=tau.b,"tau.a"=tau.a))
 }
 
 
@@ -62,3 +66,6 @@ sapply(1:Nyears,FUN=function(y){sapply(1:Nspecies,FUN=function(x){ricker_lin(dat
 mon_names <- names(ini[[1]])
 
 results <- run.jags(model="keogh_d1.jags",monitor=mon_names, data=dat, n.chains=nChains, method="rjags", inits=ini, plots=F,silent.jag=F, modules=c("glm","bugs"),sample=nSamps,adapt=nAdapt,burnin=nBurnin,thin=nThin,summarise=FALSE)
+
+
+summary(results)

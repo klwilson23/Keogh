@@ -11,21 +11,26 @@ keogh_JAGS <- "model {
 
   for(j in 1:Nspecies) # the regressions
   {
-    rho_a[j] ~ dunif(-1,1) # autocorrelation
-    rho_b[j] ~ dunif(-1,1) # autocorrelation
-    rho_Rec[j] ~ dnorm(0,1e-3)
-    rec.cv[j] ~ dunif(0,0.6) # cv in recruitment
-    a_t[1,j] ~ dnorm(10,1e-3)T(0,)
-    b_t[1,j] ~ dnorm(0.00023,1e-1)T(0,)
-    recHat[1,j] ~ dnorm(recruits[1,j],1/pow(recruits[1,j]*rec.cv[j],2))T(0,)
+    recHat[1,j] ~ dnorm(10000,1/pow(10000*rec.cv[j],2))T(0,)
     for(i in 2:(Nyears))
     {
-      log(a_t[i,j]) <- rho_a[j]*log(a_t[i-1,j])
-      b_t[i,j] <- rho_b[j]*b_t[i-1,j]
+      a_t[i,j] ~ dlnorm(log(rho_a[j]*a_t[i-1,j]),tau.a[j])
+      b_t[i,j] ~ dnorm(rho_b[j]*b_t[i-1,j],tau.b[j])T(0,)
       muRec[i,j] <-  rho_Rec[j]*recHat[i-1,j] + a_t[i,j]*stock[i,j]*exp(-b_t[i,j]*stock[i,j])
       recHat[i,j] ~ dnorm(muRec[i,j],1/pow(muRec[i,j]*rec.cv[j],2))T(0,)
     }
   } # end the process portion
+
+  for(j in 1:Nspecies) {
+    rho_a[j] ~ dunif(0,1) # autocorrelation
+    rho_b[j] ~ dunif(0,1) # autocorrelation
+    rho_Rec[j] ~ dunif(0,1) # autocorrelation
+    rec.cv[j] ~ dgamma(1e-3,1e-3) # cv in recruitment
+    a_t[1,j] ~ dlnorm(log(10),tau.a[j])
+    b_t[1,j] ~ dnorm(0.00023,tau.b[j])T(0,)
+    tau.b[j] ~ dgamma(1e-3,1e-3)
+    tau.a[j] ~ dgamma(1e-3,1e-3)
+  }
   
 }
 "
