@@ -14,7 +14,7 @@ keogh_JAGS <- "model {
     recHat[1,j] ~ dnorm(10000,1/pow(10000*rec.cv[j],2))T(0,)
     for(i in 2:(Nyears))
     {
-      a_t[i,j] ~ dlnorm(log(rho_a[j]*a_t[i-1,j]),tau.a[j])
+      a_t[i,j] ~ dlnorm(log(a_t[i-1,j]),tau.a[j])
       b_t[i,j] ~ dnorm(rho_b[j]*b_t[i-1,j],tau.b[j])T(0,)
       muRec[i,j] <-  rho_Rec[j]*recHat[i-1,j] + a_t[i,j]*stock[i,j]*exp(-b_t[i,j]*stock[i,j])
       recHat[i,j] ~ dnorm(muRec[i,j],1/pow(muRec[i,j]*rec.cv[j],2))T(0,)
