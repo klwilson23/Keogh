@@ -8,8 +8,8 @@ dat <- readRDS("stockRec.rds")
 
 # Set up MCMC -------------------------------------------------------------
 
-nSamps <- 10000
-nThin <- 5
+nSamps <- 1000
+nThin <- 3
 nBurnin <- nSamps*nThin
 nChains <- 2
 nAdapt <- round(0.1*nBurnin)
@@ -44,6 +44,8 @@ gen_ini <- function()
 gen_ini <- function()
 {
   rec.cv <- runif(Nspecies,0,0.5) # cv in recruitment
+  sys.sd <- abs(rnorm(Nspecies,100,10)) # cv in recruitment
+  
   rho_Rec <- runif(Nspecies,0,1)
   #b_t <- matrix(1e-3*abs(rnorm(Nspecies,0,1)),Nyears+1,Nspecies)
   #la_t <- matrix(log(abs(rnorm(Nspecies,10,1))),Nyears+1,Nspecies)
@@ -52,7 +54,7 @@ gen_ini <- function()
   tau.b <- 1e-3*rgamma(Nspecies,100,100) # variance in DD-survival slope
   tau.a <- 1e-3*rgamma(Nspecies,100,100) # variance in alpha
   
-  return(list("rho_Rec"=rho_Rec,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b,"tau.b"=tau.b,"tau.a"=tau.a))
+  return(list("rho_Rec"=rho_Rec,"sys.sd"=sys.sd,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b,"tau.b"=tau.b,"tau.a"=tau.a))
 }
 
 
