@@ -38,13 +38,13 @@ ricker_lin <- function(stock,a,b,alpha,beta,comp,t)
 Nspecies <- 5
 Nyears <- 40
 
-recCV <- rep(0.4,Nspecies)
+recCV <- rep(0.3,Nspecies)
 phiE0 <- rep(1,Nspecies) # equilibrium eggs per recruit
 R0 <- rep(1e4,Nspecies) # equilibrium recruitment
 CR <- c(10,10,10,10,10) # recruitment compensation ratio for Ricker (Forrest et al. 2010 CJFAS)
 mSurv <- rep(0.3,Nspecies)
-mInits <- 1/(1+exp(log((1-mSurv)/(mSurv))))
-mar.CV <- rep(0.15,Nspecies)
+mInits <- 1/(1+exp(log((mSurv)/(1-mSurv))))
+mar.CV <- rep(0.1,Nspecies)
 
 a <- CR/phiE0
 b <- log(CR)/(R0*phiE0)
@@ -74,8 +74,8 @@ recruits[1,] <- sapply(1:Nspecies,function(x){ricker_lin("stock"=stock[1,x],"a"=
 for(i in 2:(Nyears+1))
 {
   # do logistic regression on marine survival
-  shape <- get_beta(1/(1+exp(-log((mSurv)/(1-mSurv)) + marTrend*(i-1))),mar.CV)
-  mSurv.noise <- rbeta(Nspecies,shape$alpha,shape$beta)
+  shape <- rnorm(Nspecies,-log((mSurv)/(1-mSurv)) + marTrend*(i-1),mar.CV)
+  mSurv.noise <- 1/(1+exp(shape))
   stock[i,] <- recruits[i-1,]*mSurv.noise
   #mnRec <- sapply(1:Nspecies,function(x){ricker("stock"=stock[i,x],"phiE0"=phiE0[x],"R0"=R0[x],"CR"=CR[x],"beta"=competition[x,],"comp"=recruits[i-1,])})
   

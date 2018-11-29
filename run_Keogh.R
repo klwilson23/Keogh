@@ -8,8 +8,8 @@ dat <- readRDS("stockRec.rds")
 
 # Set up MCMC -------------------------------------------------------------
 
-nSamps <- 1000
-nThin <- 3
+nSamps <- 1200
+nThin <- 10
 nBurnin <- nSamps*nThin
 nChains <- 2
 nAdapt <- round(0.1*nBurnin)
@@ -54,7 +54,11 @@ gen_ini <- function()
   tau.b <- 1e-3*rgamma(Nspecies,100,100) # variance in DD-survival slope
   tau.a <- 1e-3*rgamma(Nspecies,100,100) # variance in alpha
   
-  return(list("rho_Rec"=rho_Rec,"sys.sd"=sys.sd,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b,"tau.b"=tau.b,"tau.a"=tau.a))
+  sd.surv <- abs(runif(Nspecies,0,1)) # variance in marine survival
+  marSurv <- rbeta(Nspecies,1,5) # baseline marine survival
+  marTrend <- rnorm(Nspecies,0,1e-3) # slope in marine marine survival
+  
+  return(list("rho_Rec"=rho_Rec,"sys.sd"=sys.sd,"rec.cv"=rec.cv,"rho_a"=rho_a,"rho_b"=rho_b,"tau.b"=tau.b,"tau.a"=tau.a,"sd.surv"=sd.surv,"marSurv"=marSurv,"marTrend"=marTrend))
 }
 
 
