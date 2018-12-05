@@ -5,6 +5,8 @@ Corner_text <- function(text, location="topright",...)
 }
 
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
+#keogh <- read.csv("Data/Keogh_Database_Final_19nov18.csv",stringsAsFactors = F,header=T)
+keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F,header=T)
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
 pinks <- pinks[order(pinks$Year),]
 
@@ -16,7 +18,9 @@ plot(pinks$Stock,pinks$Recruits)
 keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
 keogh$life_stage[keogh$life_stage=="F"] <- "f"
 keogh$life_stage[keogh$life_stage==" "] <- ""
-keogh$age <- as.numeric(keogh$fresh_age)
+keogh$age2 <- as.numeric(keogh$fresh_age)
+keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="/.")[[1]][1])})
+
 keogh$age_ocean <- as.numeric(keogh$ocean_age)
 keogh$age_ocean[keogh$life_stage=="s"] <- 0
 keogh$hatch_year <- keogh$year-(keogh$age-keogh$age_ocean)
@@ -67,6 +71,17 @@ for(i in annual_sh_abund$Year)
 stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
 
+#saveRDS(stock_rec,"steelhead_stockRec_v2.rds")
+
+keogh_sh <- readRDS("steelhead_stockRec.rds")
+keogh_sh_v2 <- readRDS("steelhead_stockRec_v2.rds")
+
+plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,15000),type="l",xlab="Year",ylab="Smolts (assigned to brood year)")
+points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",ylim=c(0,15000),type="b",lty=2,lwd=1)
+points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
+legend("topright",c("Tom Johnston","Current QA/QC","Current Any Reads"),col=c("black","dodgerblue","orange"),pch=c(NA,21,21),pt.bg=c(NA,"dodgerblue","orange"),lty=c(1,2,1),lwd=c(2,2,2))
+
+
 plot(stock_rec$Adults,log(stock_rec$Smolts/stock_rec$Adults))
 sh_SR <- lm(log(stock_rec$Smolts/stock_rec$Adults)~stock_rec$Adults)
 abline(sh_SR)
@@ -83,7 +98,6 @@ curve(exp(coef(pk_SR)[1])*x*exp(coef(pk_SR)[2]*x),add=T,from=0,to=max(pinks$Stoc
 plot(stock_rec$Year,stock_rec$Adults/stock_rec$Smolts,xlab="Year",ylab="Marin survival (%)",type="b")
 
 
-
 matplot(stock_rec[,2:3],type="l")
 
 # compile cutthroat trout data
@@ -92,7 +106,7 @@ ct_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="ct",],FUN=su
 ct_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="ct",],FUN=sum,na.rm=T)
 CT_annual <- dcast(ct_R,year~life_stage,value.var="number")
 
-ct_lag <- 3 # range is 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal
+ct_lag <- 2 # range is 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal:  Losee et al. (2018) suggests age 2 for coastal cutties
 # Smith 1980 BC FLNRO suggests age 3 for Keogh River
 ct_SR <- data.frame("Year"=CT_annual$year[1:(length(CT_annual$year)-ct_lag)],"Stock"=CT_annual$a[1:(length(CT_annual$year)-ct_lag)],"Recruits"=CT_annual$s[(ct_lag+1):length(CT_annual$year)])
 
@@ -155,3 +169,15 @@ Corner_text("d)","topleft")
 #dev.off()
 
 plot(annual_smolts_sh)
+
+
+
+prog <- 1
+Niters <- 1e6
+Bar <- txtProgressBar(min=0,max=Niters,style=3)
+for(i in 1:Niters)
+{
+  setTxtProgressBar(Bar,value=prog)
+  prog <- prog + 1
+  if(prog==Niters){print("done!")}
+}
