@@ -169,15 +169,3 @@ Corner_text("d)","topleft")
 #dev.off()
 
 plot(annual_smolts_sh)
-
-
-
-prog <- 1
-Niters <- 1e6
-Bar <- txtProgressBar(min=0,max=Niters,style=3)
-for(i in 1:Niters)
-{
-  setTxtProgressBar(Bar,value=prog)
-  prog <- prog + 1
-  if(prog==Niters){print("done!")}
-}
