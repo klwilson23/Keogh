@@ -1,0 +1,71 @@
+"run.kalman" <- function(dataset=sample.data, stock="Willapa", initials = list(init.mean.a = 1, init.var.a = 1, b = -1, ln.sig.e = -1, ln.sig.w = -1, Ts = 1))
+{
+	# Written for S-Plus 2000, Professional Release 2
+	# Source of this code:
+	# School of Resource and Environmental Management
+	# Simon Fraser University
+	# Burnaby, British Columbia
+	# Canada V5A 1S6
+	#
+	# For future inquiries, contact:
+	# Randall M. Peterman at the above School, either by
+	#       e-mail at rmpasst@sfu.ca or by phone at 604 291-4683
+	#
+	# Authors of this code:
+	# Brigitte Dorner      Last modified: Nov 2, 2003
+	#
+	# Purpose: A script for running a Kalman filter (random walk) analysis on a single salmon stock
+	# Assumes the data is in the form of a data frame with columns 
+	# BY (Brood Year), Stock, S (number of spawners), R (numbers of Recruits), and SR (ln(R/S)). 
+	# Before calling kf.rw to do the actual analysis, the script does some consistency checks.
+	# Rows with R = -1 are discarded since they are assumed to represent incomplete observations.
+	# Missing years in the record are filled in by inserting rows with NA data values. 
+	
+	data <- dataset[dataset$Stock == stock, c("BY", "S", "R", "SR")]
+
+	# ditch incomplete years (i.e., years with R == -1) from record
+	valid.years <- data$R != -1
+	valid.years[is.na(valid.years)] <- T	# allow records with NA data
+	data <- data[valid.years,  ]
+	
+	# make sure the dataset is in ascending order by brood year and complete, i.e., there are no missing years
+	data <- data[order(data$BY),  ]
+	if ( all((data$BY %% 2) == 1) || all((data$BY %% 2) == 0) )   # pink special! run is every second year only
+	{  
+	   if (all((data$BY %% 2) == 1)) 
+			cat("This is an odd-year run!\n")
+	   else
+	       cat("This is an even-year run!\n")
+	  
+		full.sequence.of.years <- seq(from=min(data$BY), to = max(data$BY), by=2)
+	}
+	
+	else
+		full.sequence.of.years <- seq(from = min(data$BY), to = max(data$BY), by=1)
+
+	if(any(data$BY != full.sequence.of.years)) 
+	{ # got some missing years in the record
+		cat("Warning: found missing years ", setdiff(full.sequence.of.years, data$BY), "in record for stock ", stock, "!\nFilling in with NAs and interpolating a values ...\n")
+		new.data <- data.frame(matrix(nrow = length(full.sequence.of.years), ncol = 4), row.names = full.sequence.of.years)
+		names(new.data) <- names(data)
+		new.data$BY <- full.sequence.of.years
+		new.data[as.character(data$BY), c("S", "R", "SR")] <- data[, c("S", "R", "SR")]
+		data <- new.data
+	}
+	
+	cat("Running Kalman analysis for salmon stock ", stock, "\n")
+	result <- kf.rw(initials, data$S, data$SR)
+	cat("\n")
+	print(result$Report)
+	
+	output.df <- data.frame(BY = data$BY, S = data$S, R = data$R, 
+		SR = data$SR, SR.smooth = result$smoothe.y, a.smooth = 
+		result$smoothe.mean.a, a.smooth.var = result$smoothe.var.a)
+		
+	output.summary.stats <- list(b = result$b, sig.e = result$sig.e,
+		sig.w = result$sig.w, N.tot = result$N.tot, N.cond = 
+		result$N.cond, Param = result$Param, AICc = result$AICc,
+		Report = result$Report)
+		
+	list(df = output.df, summary = output.summary.stats)
+}

@@ -1,0 +1,31 @@
+# Author: Marie Auger-Methe
+# Associated with manuscript: Auger-Methe et al. 2016 State-space models' dirty little secrets:
+# even simple linear Gaussian models can have estimation problems. Scientific Reports
+
+model {
+  # x0 = 0
+  x[1] <- 0
+  # Process eqn
+  for (i in 2:(N+1)) {
+    x[i] ~ dnorm(rho*x[i-1], precPro)
+  }
+
+  # Observation eqn
+  for (i in 1:N) {    
+    y[i] ~ dnorm(x[i+1], precObs)
+  }
+
+  # Priors for Observation equation
+  # Gelman 2006 suggests using a half normal prior centered at 0 with a high sd
+  # e.g., sd ~ HalfN(0,sd=100)
+  # precision = 1/sd^2
+  # 0.0001 = 1/(100^2)
+  sdObs ~ dnorm(0,0.0001)T(0,)
+  precObs <- 1/pow(sdObs,2) # JAGS use the precision which is 1/var
+  
+  # Priors of Process equation
+  sdPro ~ dnorm(0,0.0001)T(0,)
+  precPro <- 1/pow(sdPro,2)
+  
+  rho ~ dunif(-1, 1)
+}

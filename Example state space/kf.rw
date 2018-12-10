@@ -1,0 +1,83 @@
+"kf.rw" <- function(initial, x, y)
+{
+# Written for S-Plus 2000, Professional Release 2
+# Source of this code:
+# School of Resource and Environmental Management
+# Simon Fraser University
+# Burnaby, British Columbia
+# Canada V5A 1S6
+#
+# For future inquiries, contact:
+# Randall M. Peterman at the above School, either by
+#       e-mail at rmpasst@sfu.ca or by phone at 604 291-4683
+#
+# Authors of this code:
+# Brice MacGregor
+# February 14, 2002
+# Modified by Brian Pyper Oct 10, 2002
+# Modified by Brigitte Dorner Oct 29, 2003
+
+# Purpose:
+# ======== 
+# Finds ML estimates of kalman filter.  KF model assumes the following:
+# - Simple linear regression
+# - Time-varying intercept only
+# - Intercept follows a random walk
+# - Fits 3 PARAMETERS (b, sig.e, sig.w)
+
+# Arguments:
+# ==========
+# initial  LIST with initial parameter values and starting conditions for estimation procedure.  
+#    Names for the elements of initial must be: 
+#
+#     init.mean.a  Initial value for mean of intercept in recursive calculations
+#     init.var.a   Initial value for variance of intercept in recursive calculations
+#     b     Starting value of slope for ML estimation
+#     ln.sig.e, ln.sig.w Starting values for natural logarithms of error terms in 
+#          observation and system equations
+#     Ts     Number of observations at start of data set to omit for
+#          calculation of variance in observation equation and concentrated
+#          likelihood function. 
+# x, y   Data for the observation equation
+
+# Other functions called: 
+# =======================
+# kalman.rw  Performs recursive calculations and likelihood function given the 
+#          parameter values, starting conditions and the data.
+
+# Read starting conditions from initial
+	init.mean.a <- initial$init.mean.a
+	init.var.a <- initial$init.var.a
+	b <- initial$b
+	ln.sig.e <- initial$ln.sig.e
+	ln.sig.w <- initial$ln.sig.w
+	Ts <- initial$Ts	# Maximum Likelihood Estimation:
+
+#   Creates object "fit" to store ML estimates
+# Brigitte: assign X and Y to the session db to make following model fit work from within batch file
+	assign("X", x, where = 0)
+	assign("Y", y, where = 0)
+	
+	fit <- ms( ~ kalman.rw(init.mean.a, init.var.a, b, ln.sig.e, ln.sig.w, X, Y, Ts)$cum.neg.log.lik, 
+				start = list(b = b, ln.sig.e = ln.sig.e, ln.sig.w = ln.sig.w))	
+
+	# Extract ML estimates from "fit"
+	b.mle <- fit$parameters[1]
+	ln.sig.e.mle <- fit$parameters[2]
+	ln.sig.w.mle <- fit$parameters[3]	
+
+	# Perform recursive calculations for KF with ML estimates:
+	out <- kalman.rw(init.mean.a, init.var.a, b.mle, ln.sig.e.mle, ln.sig.w.mle, x, y, Ts)
+	N <- length(x) - sum(is.na(x))
+	param <- 3
+	AICc <- 2 * out$cum.neg.log.lik[1] + 2 * param * ((N - Ts)/(N - Ts - param - 1))
+	out[[24]] <- N
+	out[[25]] <- Ts
+	out[[26]] <- param
+	out[[27]] <- AICc
+	out[[28]] <- summary(fit)
+	x <- names(out)
+	x[24:28] <- c("N.tot", "N.cond", "Param", "AICc", "Report")
+	names(out) <- x
+	out
+}
