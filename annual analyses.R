@@ -1,3 +1,4 @@
+library(reshape2)
 
 Corner_text <- function(text, location="topright",...)
 {
@@ -20,6 +21,10 @@ keogh$life_stage[keogh$life_stage=="F"] <- "f"
 keogh$life_stage[keogh$life_stage==" "] <- ""
 keogh$age2 <- as.numeric(keogh$fresh_age)
 keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="/.")[[1]][1])})
+
+sampSize <- aggregate(age~year+life_stage,data=keogh[keogh$species=="sh",],FUN=function(x){sum(!is.na(x))})
+ageEstimats <- dcast(sampSize,year~life_stage,value.var="age")
+
 
 keogh$age_ocean <- as.numeric(keogh$ocean_age)
 keogh$age_ocean[keogh$life_stage=="s"] <- 0
@@ -44,8 +49,6 @@ variance <- aggregate(fork_length~year+species+life_stage,data=keogh,FUN=sd,na.r
 size$sigma <- variance$fork_length
 colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
-
-library(reshape2)
 annual_cohort <- dcast(annual_cohorts,Year~Species+Hatch,value.var="Abundance")
 
 annual_cohort_prop <- annual_cohort[,-1]/rowSums(annual_cohort[,-1],na.rm=T)
