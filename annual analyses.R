@@ -14,38 +14,38 @@ pinks <- pinks[order(pinks$Year),]
 # read in and calculate pink salmon stock-recruitment
 pinks <- data.frame("Year"=pinks$Year,"Stock"=c(pinks$Stock[-1],NA),"Recruits"=pinks$Stock)
 plot(pinks$Stock,pinks$Recruits)
-#keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
+keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
 
 keogh$life_stage[keogh$life_stage=="F"] <- "f"
 keogh$life_stage[keogh$life_stage==" "] <- ""
-keogh$age2 <- as.numeric(keogh$fresh_age)
-keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])})
-keogh$age <- as.numeric(ifelse(is.na(keogh$age) & !is.na(keogh$fresh_age),keogh$fresh_age,keogh$age))
-keogh$OceanAge <- sapply(keogh$age_final,function(x){as.numeric(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
-keogh$OceanAge <- as.numeric(ifelse(is.na(keogh$OceanAge) & !is.na(keogh$ocean_age),keogh$ocean_age,keogh$OceanAge))
 
-keogh[keogh$year==1985 & keogh$species=="sh" & keogh$life_stage=="a",c("age_final","age","ocean_age","OceanAge")]
+keogh$total_age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])+sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
+
+keogh$age2 <- as.numeric(keogh$fresh_age)
+keogh$age_final <- ifelse(!is.na(keogh$total_age),keogh$age_final,keogh$X1_ager)
+keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])})
+keogh$OceanAge <- sapply(keogh$age_final,function(x){sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
+
+
+#keogh[keogh$year==1985 & keogh$species=="sh" & keogh$life_stage=="a",c("age_final","age","ocean_age","OceanAge")]
 
 #as.numeric(strsplit(keogh$age_final[98301],split="\\.")[[1]][2])
 
-sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]))
+#sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]))
 
 
 #keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
 sampSize <- aggregate(number~year+life_stage,data=keogh[keogh$species=="sh"&!is.na(keogh$age),],FUN=function(x){sum(x)})
 ageEstimates <- dcast(sampSize,year~life_stage,value.var="number")
 
-
 keogh$age_ocean <- as.numeric(keogh$OceanAge)
 keogh$age_ocean[keogh$life_stage=="s"] <- 0
-keogh$hatch_year <- keogh$year-(keogh$age+keogh$age_ocean)
+keogh$hatch_year <- ifelse(keogh$life_stage=="s",keogh$year - keogh$age, keogh$year-(keogh$total_age))
 keogh$smolt_year <- keogh$year-(keogh$age_ocean)
-keogh$total_age <- keogh$age+keogh$age_ocean
 
-annual_age <- aggregate(number~smolt_year+hatch_year+species+life_stage+age+age_ocean,data=keogh,FUN=sum,na.rm=T)
-colnames(annual_age) <- c("Year","Hatch","Species","Stage","Age","OceanAge","Abundance")
+annual_age <- aggregate(number~smolt_year+hatch_year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
+colnames(annual_age) <- c("Year","Hatch","Species","Stage","Age","Abundance")
 annual_age <- subset(annual_age,Stage%in%c("s","a","k"))
-annual_age$Hatch <- annual_age$Year-(annual_age$Age+annual_age$OceanAge)
 annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Age,data=annual_age,FUN=sum,na.rm=T)
 
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
@@ -62,8 +62,8 @@ size$sigma <- variance$fork_length
 colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
 annual_cohort <- dcast(annual_cohorts,Year~Species+Hatch,value.var="Abundance",fun.aggregate=sum)
-
-annual_cohort_prop <- annual_cohort[,-1]/rowSums(annual_cohort[,-1],na.rm=T)
+annual_cohort_sh <- annual_cohort[,grep("sh",colnames(annual_cohort))]
+annual_cohort_prop <- annual_cohort_sh[,-1]/rowSums(annual_cohort_sh[,-1],na.rm=T)
 
 annual_prop_sh <- annual_cohort_prop[,grep("sh",colnames(annual_cohort_prop))]
 row.names(annual_prop_sh) <- row.names(annual_cohort_prop) <- annual_cohort$Year
@@ -82,6 +82,10 @@ for(i in annual_sh_abund$Year)
 {
   annual_smolts_sh[which(annual_sh_abund$Year==i)] <- sum(annual_sh_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),annual_sh_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
 }
+
+c(0.037,0.585,0.719,0.022,0.0237)*annual_sh_abund$sh_s[3:7]
+
+smolts <- colSums(apply(annual_prop_sh[row.names(annual_prop_sh)%in%annual_sh_abund$Year,],2,FUN=function(x){x*annual_sh_abund$sh_s}))
 
 stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
