@@ -95,10 +95,10 @@ saveRDS(stock_rec,"steelhead_stockRec.rds")
 keogh_sh <- readRDS("steelhead_stockRec.rds")
 keogh_sh_v2 <- readRDS("steelhead_stockRec_v2.rds")
 
-plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,15000),type="l",xlab="Year",ylab="Smolts (assigned to brood year)")
-points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",ylim=c(0,15000),type="b",lty=2,lwd=1)
-points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
-legend("topright",c("Tom Johnston","Current QA/QC","Current Any Reads"),col=c("black","dodgerblue","orange"),pch=c(NA,21,21),pt.bg=c(NA,"dodgerblue","orange"),lty=c(1,2,1),lwd=c(2,2,2))
+plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,max(keogh_sh$Smolts,keogh_atlas$Total,na.rm=T)),type="l",xlab="Year",ylab="Smolts (assigned to brood year)")
+points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",type="b",lty=2,lwd=1)
+#points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
+legend("topright",c("Tom Johnston","Current QA/QC"),col=c("black","dodgerblue"),pch=c(NA,21),pt.bg=c(NA,"dodgerblue"),lty=c(1,2),lwd=c(2,2),bty="n")
 
 
 plot(stock_rec$Adults,log(stock_rec$Smolts/stock_rec$Adults))
