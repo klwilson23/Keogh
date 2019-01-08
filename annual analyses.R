@@ -11,6 +11,9 @@ keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
 pinks <- pinks[order(pinks$Year),]
 
+coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
+coho <- coho[order(coho$Year),]
+
 # read in and calculate pink salmon stock-recruitment
 pinks <- data.frame("Year"=pinks$Year,"Stock"=c(pinks$Stock[-1],NA),"Recruits"=pinks$Stock)
 plot(pinks$Stock,pinks$Recruits)
@@ -146,13 +149,17 @@ dv_Ricker <- lm(log(dv_SR$Recruits/dv_SR$Stock)~dv_SR$Stock)
 curve(exp(coef(dv_Ricker)[1])*x*exp(coef(dv_Ricker)[2]*x),add=T,from=0,to=max(dv_SR$Stock,na.rm=T))
 
 
-# coho salmon
+# compile data on coho salmon
 co_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="co",],FUN=sum,na.rm=T)
 co_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="co",],FUN=sum,na.rm=T)
 co_annual <- dcast(co_R,year~life_stage,value.var="number")
 
-co_lag <- 1 # Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
-co_SR <- data.frame("Year"=co_annual$year[1:(length(co_annual$year)-co_lag)],"Stock"=co_annual$a[1:(length(co_annual$year)-co_lag)],"Recruits"=co_annual$s[(co_lag+1):length(co_annual$year)])
+co_S <- rep(NA,length(co_annual$year))
+names(co_S) <- co_annual$year
+co_S[co_annual$year%in%coho$Year] <- coho$Adults
+
+co_lag <- 1 # fixed lag time for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek
+co_SR <- data.frame("Year"=co_annual$year[1:(length(co_annual$year)-co_lag)],"Stock"=co_S[1:(length(co_annual$year)-co_lag)],"Recruits"=co_annual$s[(co_lag+1):length(co_annual$year)])
 
 plot(co_SR$Stock,co_SR$Recruits)
 co_Ricker <- lm(log(co_SR$Recruits/co_SR$Stock)~co_SR$Stock)
@@ -160,7 +167,7 @@ curve(exp(coef(co_Ricker)[1])*x*exp(coef(co_Ricker)[2]*x),add=T,from=0,to=max(co
 
 
 #tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
-layout(matrix(1:4,nrow=2,ncol=2,byrow=T))
+layout(matrix(1:6,nrow=3,ncol=2,byrow=T))
 par(mar=c(4,4,1,1))
 # panel a
 plot(stock_rec$Adults,stock_rec$Smolts,xlab="steelhead adults",ylab="steelhead smolts",ylim=c(0,max(stock_rec$Smolts,na.rm=T)))
@@ -185,6 +192,59 @@ dv_Ricker <- lm(log(dv_SR$Recruits/dv_SR$Stock)~dv_SR$Stock)
 curve(exp(coef(dv_Ricker)[1])*x*exp(coef(dv_Ricker)[2]*x),add=T,from=0,to=max(dv_SR$Stock,na.rm=T))
 Corner_text("d)","topleft")
 
+#panel e
+plot(co_SR$Stock,co_SR$Recruits,xlab="coho adults (t)",ylab="coho smolts (t+2)")
+co_Ricker <- lm(log(co_SR$Recruits/co_SR$Stock)~co_SR$Stock)
+curve(exp(coef(co_Ricker)[1])*x*exp(coef(co_Ricker)[2]*x),add=T,from=0,to=max(co_SR$Stock,na.rm=T))
+Corner_text("d)","topleft")
 #dev.off()
 
-plot(annual_smolts_sh)
+mat1 <- matrix(sapply(1:15,FUN=function(x){rep(x,3)}),nrow=15,ncol=3,byrow=F)
+mat1 <- matrix(sapply(1:ncol(mat1),FUN=function(x){rbind(rep(mat1[,x],3))}),nrow=15,ncol=9,byrow=F)
+mat1 <- rbind(mat1,rep(0,ncol(mat1)))
+mat1 <- rbind(rep(0,ncol(mat1)),mat1)
+
+
+layout(mat1)
+par(mar=c(1,4,1,1))
+YrRange <- c(1953,2018)
+plot(stock_rec$Year,stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead adults")
+axis(1,tick=T,labels=FALSE)
+title("Spawners",line=1,xpd=NA)
+plot(pinks$Year,pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t)")
+axis(1,tick=T,labels=FALSE)
+plot(ct_SR$Year,ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat adults (t)")
+axis(1,tick=T,labels=FALSE)
+plot(dv_SR$Year,dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden adults (t)")
+axis(1,tick=T,labels=FALSE)
+plot(co_SR$Year,co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho adults (t)")
+axis(1,tick=T,labels=TRUE)
+mtext("Year",side=1,line=2,cex=0.8)
+
+# plot smolts
+plot(stock_rec$Year,stock_rec$Smolts,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead smolts")
+axis(1,tick=T,labels=FALSE)
+title("Recruits",line=1,xpd=NA)
+plot(pinks$Year,pinks$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t+2)")
+axis(1,tick=T,labels=FALSE)
+plot(ct_SR$Year,ct_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat smolts (t+2)")
+axis(1,tick=T,labels=FALSE)
+plot(dv_SR$Year,dv_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden smolts (t+4)")
+axis(1,tick=T,labels=FALSE)
+plot(co_SR$Year,co_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho smolts (t+1)")
+axis(1,tick=T,labels=TRUE)
+mtext("Year",side=1,line=2,cex=0.8)
+
+# plot smolt production
+plot(stock_rec$Year,stock_rec$Smolts/stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead")
+axis(1,tick=T,labels=FALSE)
+title("Recruits per spawner",line=1,xpd=NA)
+plot(pinks$Year,pinks$Recruits/pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink")
+axis(1,tick=T,labels=FALSE)
+plot(ct_SR$Year,ct_SR$Recruits/ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat")
+axis(1,tick=T,labels=FALSE)
+plot(dv_SR$Year,dv_SR$Recruits/dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden")
+axis(1,tick=T,labels=FALSE)
+plot(co_SR$Year,co_SR$Recruits/co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho")
+axis(1,tick=T,labels=TRUE)
+mtext("Year",side=1,line=2,cex=0.8)
