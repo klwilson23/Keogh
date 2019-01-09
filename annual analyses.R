@@ -192,7 +192,7 @@ ch_Ricker <- lm(log(ch_SR$Recruits/ch_SR$Stock)~ch_SR$Stock)
 curve(exp(coef(ch_Ricker)[1])*x*exp(coef(ch_Ricker)[2]*x),add=T,from=0,to=max(ch_SR$Stock,na.rm=T))
 
 
-tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
+#tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
 layout(matrix(1:6,nrow=3,ncol=2,byrow=T))
 par(mar=c(4,4,1,1))
 # panel a
@@ -230,7 +230,7 @@ ch_Ricker <- lm(log(ch_SR$Recruits/co_SR$Stock)~ch_SR$Stock)
 curve(exp(coef(ch_Ricker)[1])*x*exp(coef(ch_Ricker)[2]*x),add=T,from=0,to=max(ch_SR$Stock,na.rm=T))
 Corner_text("f)","topleft")
 
-dev.off()
+#dev.off()
 
 mat1 <- matrix(sapply(1:18,FUN=function(x){rep(x,3)}),nrow=18,ncol=3,byrow=F)
 mat1 <- matrix(sapply(1:ncol(mat1),FUN=function(x){rbind(rep(mat1[,x],3))}),nrow=18,ncol=9,byrow=F)
@@ -239,7 +239,7 @@ mat1 <- rbind(rep(0,ncol(mat1)),mat1)
 
 regimePlot <- function(){c(rect(xleft=salmoYrsReg1[1],xright=salmoYrsReg1[2],ybottom=-1e6,ytop=1e6,col="grey90",border=NA),rect(xleft=salmoYrsReg2[1],xright=salmoYrsReg2[2],ybottom=-1e6,ytop=1e6,col="grey70",border=NA))}
 
-tiff("keogh time series since 1953.tiff",compression="lzw",units="in",height=9,width=9,res=800)
+#tiff("keogh time series since 1953.tiff",compression="lzw",units="in",height=9,width=9,res=800)
 
 layout(mat1)
 par(mar=c(1,4,1,1))
@@ -310,9 +310,9 @@ plot(ch_SR$Year,ch_SR$Recruits/ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodg
 axis(1,tick=T,labels=TRUE)
 
 mtext("Year",side=1,line=2,cex=0.8)
-dev.off()
+#dev.off()
 
-tiff("keogh time series since 1975.tiff",compression="lzw",units="in",height=9,width=9,res=800)
+#tiff("keogh time series since 1975.tiff",compression="lzw",units="in",height=9,width=9,res=800)
 
 layout(mat1)
 par(mar=c(1,4,1,1))
@@ -382,4 +382,4 @@ plot(ch_SR$Year,ch_SR$Recruits/ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodg
 axis(1,tick=T,labels=TRUE)
 
 mtext("Year",side=1,line=2,cex=0.8)
-dev.off()
+#dev.off()
