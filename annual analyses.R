@@ -13,7 +13,7 @@ pinks <- pinks[order(pinks$Year),]
 pinks$Stock[pinks$Year<=1997] <- 2*pinks$Stock[pinks$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
 coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
 coho <- coho[order(coho$Year),]
-coho$Adults[coho$Year<=1997] <- 2*coho$Adults[coho$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
+coho$Adults[coho$Year<=1997] <- NA#2*coho$Adults[coho$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
 
 chum <- read.csv("Data/Keogh chum adults.csv",stringsAsFactors = F,header=T)
 chum <- chum[order(chum$Year),]
