@@ -8,6 +8,8 @@ Corner_text <- function(text, location="topright",...)
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 #keogh <- read.csv("Data/Keogh_Database_Final_19nov18.csv",stringsAsFactors = F,header=T)
 keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F,header=T)
+keogh_instream <- read.csv("Data/Keogh smolts instream outmigration.csv",stringsAsFactors=F,header=T)
+
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
 pinks <- pinks[order(pinks$Year),]
 pinks$Stock[pinks$Year<=1997] <- 2*pinks$Stock[pinks$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
@@ -108,7 +110,7 @@ saveRDS(stock_rec,"steelhead_stockRec.rds")
 keogh_sh <- readRDS("steelhead_stockRec.rds")
 keogh_sh_v2 <- readRDS("steelhead_stockRec_v2.rds")
 
-plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,max(keogh_sh$Smolts,keogh_atlas$Total,na.rm=T)),type="l",xlab="Year",ylab="Smolts (assigned to brood year)")
+plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,max(keogh_sh$Smolts,keogh_atlas$Total,na.rm=T)),type="l",xlab="Year",ylab="Smolts (assigned to brood year)",xlim=c(1972,2018))
 points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",type="b",lty=2,lwd=1)
 #points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
 legend("topright",c("Tom Johnston","Current QA/QC"),col=c("black","dodgerblue"),pch=c(NA,21),pt.bg=c(NA,"dodgerblue"),lty=c(1,2),lwd=c(2,2),bty="n")
@@ -383,3 +385,14 @@ axis(1,tick=T,labels=TRUE)
 
 mtext("Year",side=1,line=2,cex=0.8)
 #dev.off()
+
+layout(matrix(1:2,ncol=2,byrow=F))
+par(mar=c(5,4,1,1))
+plot(keogh_instream$Year,keogh_instream$Smolts,xlim=c(1970,2020),type="b",lty=2,lwd=2,col="black",ylim=c(0,30000),pch=21,bg="white",xlab="Year",ylab="Smolt abundance")
+lines(annual_sh_abund$Year,annual_sh_abund$sh_s,lty=1,lwd=2,col="dodgerblue",type="b",pch=21,bg="dodgerblue")
+legend("topright",c("Instream","Current database"),bty="n",lwd=2,lty=c(2,1),col=c("black","dodgerblue"))
+
+smolts_compare <- merge(annual_sh_abund[,c("Year","sh_s")],keogh_instream[,c("Year","Smolts")],by="Year",all=T)
+
+plot(smolts_compare$Year,(smolts_compare$sh_s-smolts_compare$Smolts)/sd(smolts_compare$sh_s-smolts_compare$Smolts,na.rm=T),xlim=c(1970,2020),type="b",lty=2,lwd=2,col="black",pch=21,bg="dodgerblue",xlab="Year",ylab="Bias (standardized residuals)")
+abline(h=0,lty=3,lwd=1,col="red")
