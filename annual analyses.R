@@ -7,6 +7,7 @@ Corner_text <- function(text, location="topright",...)
 
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 #keogh <- read.csv("Data/Keogh_Database_Final_19nov18.csv",stringsAsFactors = F,header=T)
+keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
 keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F,header=T)
 keogh_instream <- read.csv("Data/Keogh smolts instream outmigration.csv",stringsAsFactors=F,header=T)
 
@@ -22,7 +23,7 @@ chum <- chum[order(chum$Year),]
 chum$Adults[chum$Adults==0] <- NA
 chum$Adults[chum$Year<=1997] <- 2*chum$Adults[chum$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
 
-
+# read in coho smolt data from Tom Johnston dataset
 coSm <- read.csv("Data/Keogh coho smolts.csv",stringsAsFactors = F,header=T)
 coSm <- coSm[order(coSm$Year),]
 
@@ -41,6 +42,7 @@ keogh$age_final <- ifelse(!is.na(keogh$total_age),keogh$age_final,keogh$X1_ager)
 keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])})
 keogh$OceanAge <- sapply(keogh$age_final,function(x){sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
 
+# example code for validating the string splits for age data when age reads a character sequence like 3.1s2s
 
 #keogh[keogh$year==1985 & keogh$species=="sh" & keogh$life_stage=="a",c("age_final","age","ocean_age","OceanAge")]
 
@@ -48,14 +50,29 @@ keogh$OceanAge <- sapply(keogh$age_final,function(x){sum(as.numeric(strsplit(gsu
 
 #sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(keogh$X1_ager[185116],split="\\.")[[1]][2]))
 
-
 #keogh <- keogh[!keogh$species_code%in%c("cf","ctt","ctr","ks","shweres","shlgbres","cot"),]
+
+# find out sample size for age data by year & life stage
+
 sampSize <- aggregate(number~year+life_stage,data=keogh[keogh$species=="sh"&!is.na(keogh$age),],FUN=function(x){sum(x)})
+
+keogh$scaleLog <- ifelse(keogh$scale=="y",1,0)
+keogh$scaleN <- keogh$scaleLog*keogh$number
+sampSizev2 <- aggregate(scaleLog~year+life_stage,data=keogh[keogh$species=="sh"&!is.na(keogh$age),],FUN=function(x){sum(x)})
+
 ageEstimates <- dcast(sampSize,year~life_stage,value.var="number")
+ageEstimatesv2 <- dcast(sampSizev2,year~life_stage,value.var="scaleLog")
+
+cbind(ageEstimates$year,ageEstimates$s,ageEstimatesv2$s)
+
+# set ocean ages for all fish, smolts are given age 0 in the ocean
 
 keogh$age_ocean <- as.numeric(keogh$OceanAge)
 keogh$age_ocean[keogh$life_stage=="s"] <- 0
-keogh$hatch_year <- ifelse(keogh$life_stage=="s",keogh$year - keogh$age, keogh$year-(keogh$total_age))
+
+# assign brood year to fish as the total freshwater and ocean ages
+
+keogh$hatch_year <- ifelse(keogh$life_stage=="s",keogh$year - keogh$age, keogh$year-(keogh$total_age)) # if adult, brood year is current year minus total age
 keogh$smolt_year <- keogh$year-(keogh$age_ocean)
 
 annual_age <- aggregate(number~smolt_year+hatch_year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
@@ -64,6 +81,20 @@ annual_age <- subset(annual_age,Stage%in%c("s","a","k"))
 annual_cohorts <- aggregate(Abundance~Hatch+Year+Species+Age,data=annual_age,FUN=sum,na.rm=T)
 
 steel_age <- subset(annual_age,Species=="sh"&Stage=="s")
+
+dailyMax <- NULL
+
+for(i in unique(keogh$year))
+{
+  subKeogh <- keogh[keogh$year==i & keogh$species=="sh" & keogh$life_stage=="s" & keogh$alive!="false",]
+  for(j in unique(subKeogh$julian))
+  {
+    subDaily <- subKeogh[subKeogh$julian==j,]
+    dailyMax <- rbind(dailyMax,subDaily[which(subDaily$number==max(subDaily$number,na.rm=T)),])
+  }
+}
+
+steelDailyMax <- aggregate(number~year,dailyMax,FUN=sum,na.rm=T)
 
 annual <- aggregate(number~year+species+life_stage,data=keogh,FUN=sum,na.rm=T)
 
@@ -91,18 +122,20 @@ annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
 # to do that, we find the proportions aged and multiply the current year smolts by that proportion from hatch year Y
 annual_sh <- subset(annual,Species=="sh")
 annual_sh_abund <- dcast(annual_sh,Year~Species+Stage,value.var="Abundance")
-annual_smolts_sh <- rep(NA,length(annual_sh_abund$Year))
-names(annual_smolts_sh) <- annual_sh_abund$Year
+annual_smolts_sh <- annual_smolts_shv2 <- rep(NA,length(annual_sh_abund$Year))
+names(annual_smolts_sh) <- names(annual_smolts_shv2) <- annual_sh_abund$Year
 for(i in annual_sh_abund$Year)
 {
   annual_smolts_sh[which(annual_sh_abund$Year==i)] <- sum(annual_sh_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),annual_sh_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
+  
+  annual_smolts_shv2[which(annual_sh_abund$Year==i)] <- sum(steelDailyMax$DailyMax[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),steelDailyMax$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
+  
 }
 
-c(0.037,0.585,0.719,0.022,0.0237)*annual_sh_abund$sh_s[3:7]
 
-smolts <- colSums(apply(annual_prop_sh[row.names(annual_prop_sh)%in%annual_sh_abund$Year,],2,FUN=function(x){x*annual_sh_abund$sh_s}))
-
-stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=annual_smolts_sh)
+smolts <- colSums(apply(annual_prop_sh[row.names(annual_prop_sh)%in%annual_sh_abund$Year,],2,FUN=function(x){x*annual_smolts_shv2}))
+range(steel_age$Hatch,na.rm=T)
+stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=smolts)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
 
 saveRDS(stock_rec,"steelhead_stockRec.rds")
@@ -114,7 +147,6 @@ plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,max(keogh_sh$Smolts,keogh_atlas
 points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",type="b",lty=2,lwd=1)
 #points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
 legend("topright",c("Tom Johnston","Current QA/QC"),col=c("black","dodgerblue"),pch=c(NA,21),pt.bg=c(NA,"dodgerblue"),lty=c(1,2),lwd=c(2,2),bty="n")
-
 
 plot(stock_rec$Adults,log(stock_rec$Smolts/stock_rec$Adults))
 sh_SR <- lm(log(stock_rec$Smolts/stock_rec$Adults)~stock_rec$Adults)
@@ -386,13 +418,19 @@ axis(1,tick=T,labels=TRUE)
 mtext("Year",side=1,line=2,cex=0.8)
 #dev.off()
 
+
+colnames(steelDailyMax) <- c("Year","DailyMax")
+smolts_compare <- merge(annual_sh_abund[,c("Year","sh_s")],keogh_instream[,c("Year","Smolts")],by="Year",all=T)
+smolts_compare <- merge(smolts_compare,steelDailyMax,by="Year",all=T)
+
+jpeg("smolt abundance by sample year.jpeg",units="in",res=800,width=7,height=4)
 layout(matrix(1:2,ncol=2,byrow=F))
 par(mar=c(5,4,1,1))
-plot(keogh_instream$Year,keogh_instream$Smolts,xlim=c(1970,2020),type="b",lty=2,lwd=2,col="black",ylim=c(0,30000),pch=21,bg="white",xlab="Year",ylab="Smolt abundance")
-lines(annual_sh_abund$Year,annual_sh_abund$sh_s,lty=1,lwd=2,col="dodgerblue",type="b",pch=21,bg="dodgerblue")
-legend("topright",c("Instream","Current database"),bty="n",lwd=2,lty=c(2,1),col=c("black","dodgerblue"))
+matplot(smolts_compare$Year,smolts_compare[,-1],type="l",lty=c(1,1,1),lwd=2,col=c("black","dodgerblue","orange"),xlab="Outmigrating year",ylab="Smolt abundance")
+legend("topright",c("Current database","Instream","Daily maximum"),bty="n",lwd=2,lty=1,col=c("black","dodgerblue","orange"))
 
-smolts_compare <- merge(annual_sh_abund[,c("Year","sh_s")],keogh_instream[,c("Year","Smolts")],by="Year",all=T)
 
-plot(smolts_compare$Year,(smolts_compare$sh_s-smolts_compare$Smolts)/sd(smolts_compare$sh_s-smolts_compare$Smolts,na.rm=T),xlim=c(1970,2020),type="b",lty=2,lwd=2,col="black",pch=21,bg="dodgerblue",xlab="Year",ylab="Bias (standardized residuals)")
+matplot(smolts_compare$Year,sapply(2:4,function(x){(smolts_compare[,x]-smolts_compare[,3])/sd(smolts_compare[,3],na.rm=T)}),type="l",lty=1,lwd=2,col=c("black","dodgerblue","orange"),xlab="Outmigrating year",ylab="Bias (standardized residuals)")
 abline(h=0,lty=3,lwd=1,col="red")
+
+dev.off()
