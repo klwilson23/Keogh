@@ -11,6 +11,8 @@ keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
 keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F,header=T)
 keogh_instream <- read.csv("Data/Keogh smolts instream outmigration.csv",stringsAsFactors=F,header=T)
 
+keogh_adults <- read.csv("Data/Keogh sh adults.csv",stringsAsFactors=F,header=T)
+
 pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
 pinks <- pinks[order(pinks$Year),]
 pinks$Stock[pinks$Year<=1997] <- 2*pinks$Stock[pinks$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
@@ -95,6 +97,7 @@ for(i in unique(keogh$year))
 }
 
 steelDailyMax <- aggregate(number~year,dailyMax,FUN=sum,na.rm=T)
+colnames(steelDailyMax) <- c("Year","DailyMax")
 
 annual <- aggregate(number~year+species+life_stage,data=keogh,FUN=sum,na.rm=T)
 
@@ -109,11 +112,21 @@ colnames(size) <- c("Year","Species","Stage","Length","Sigma")
 
 annual_cohort <- dcast(annual_cohorts,Year~Species+Hatch,value.var="Abundance",fun.aggregate=sum)
 annual_cohort_sh <- annual_cohort[,grep("sh",colnames(annual_cohort))]
-annual_cohort_prop <- annual_cohort_sh[,-1]/rowSums(annual_cohort_sh[,-1],na.rm=T)
+annual_cohort_prop <- annual_cohort_sh/rowSums(annual_cohort_sh,na.rm=T)
 
 annual_prop_sh <- annual_cohort_prop[,grep("sh",colnames(annual_cohort_prop))]
-row.names(annual_prop_sh) <- row.names(annual_cohort_prop) <- annual_cohort$Year
 
+# adults with known ocean ages have a known smolt year: they should count as 'abundant' for their smolt year
+annual_outmigAdults <- subset(annual_age,Stage%in%c("a") & Species%in%c("sh"))
+annual_outmigAdults <- aggregate(Abundance~Hatch+Year+Species+Age,data=annual_outmigAdults,FUN=sum,na.rm=T)
+annual_outmigAdults <- dcast(annual_outmigAdults,Year~Species+Hatch,value.var="Abundance",fun.aggregate=sum)
+yrs <- annual_outmigAdults$Year
+annual_outmigAdults <- rowSums(annual_outmigAdults[,grep("sh",colnames(annual_outmigAdults))])
+
+names(annual_outmigAdults) <- yrs
+
+row.names(annual_prop_sh) <- row.names(annual_cohort_prop) <- annual_cohort$Year
+colnames(annual_prop_sh) <- min(annual_cohorts$Hatch):max(annual_cohorts$Hatch)
 annual_abund <- dcast(annual,Year~Species+Stage,value.var="Abundance")
 annual_size <- dcast(size,Year~Species+Stage,value.var="Length")
 annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
@@ -122,29 +135,41 @@ annual_sigma <- dcast(size,Year~Species+Stage,value.var="Sigma")
 # to do that, we find the proportions aged and multiply the current year smolts by that proportion from hatch year Y
 annual_sh <- subset(annual,Species=="sh")
 annual_sh_abund <- dcast(annual_sh,Year~Species+Stage,value.var="Abundance")
-annual_smolts_sh <- annual_smolts_shv2 <- rep(NA,length(annual_sh_abund$Year))
-names(annual_smolts_sh) <- names(annual_smolts_shv2) <- annual_sh_abund$Year
-for(i in annual_sh_abund$Year)
+
+keogh_smolt <- merge(data.frame("Year"=as.numeric(names(annual_outmigAdults)),"Smolts"=annual_outmigAdults),annual_sh_abund[,c("Year","sh_s")],by="Year",all=T)
+keogh_smolt <- data.frame(keogh_smolt$Year,rowSums(keogh_smolt[,-1],na.rm=T))
+colnames(keogh_smolt) <- c("Year","Smolts")
+
+keogh_smoltv2 <- merge(data.frame("Year"=as.numeric(names(annual_outmigAdults)),"Smolts"=annual_outmigAdults),steelDailyMax,by="Year",all=T)
+keogh_smoltv2 <- data.frame(keogh_smoltv2$Year,rowSums(keogh_smoltv2[,-1],na.rm=T))
+colnames(keogh_smoltv2) <- c("Year","Smolts")
+
+annual_smolts_sh <- annual_smolts_shv2 <- rep(NA,length(colnames(annual_prop_sh)))
+names(annual_smolts_sh) <- names(annual_smolts_shv2) <- colnames(annual_prop_sh)
+for(i in as.numeric(colnames(annual_prop_sh)))
 {
-  annual_smolts_sh[which(annual_sh_abund$Year==i)] <- sum(annual_sh_abund$sh_s[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),annual_sh_abund$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
-  
-  annual_smolts_shv2[which(annual_sh_abund$Year==i)] <- sum(steelDailyMax$DailyMax[grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],"$",collapse="|",sep=""),steelDailyMax$Year)]*annual_prop_sh[,grep(i,colnames(annual_prop_sh))][annual_prop_sh[,grep(i,colnames(annual_prop_sh))]>0],na.rm=T)
-  
+  IIbrood <- which(as.numeric(colnames(annual_prop_sh))==i)
+  IIsample <- grep(paste("^",row.names(annual_prop_sh)[annual_prop_sh[,IIbrood]>0],"$",collapse="|",sep=""),keogh_smolt$Year)
+  IIage <- which(annual_prop_sh[,IIbrood]>0)
+
+  annual_smolts_sh[IIbrood] <- sum(keogh_smolt$Smolts[IIsample]*annual_prop_sh[IIage,IIbrood],na.rm=T)
+  annual_smolts_shv2[IIbrood] <- sum(keogh_smoltv2$Smolts[IIsample]*annual_prop_sh[IIage,IIbrood],na.rm=T)
 }
 
-
-smolts <- colSums(apply(annual_prop_sh[row.names(annual_prop_sh)%in%annual_sh_abund$Year,],2,FUN=function(x){x*annual_smolts_shv2}))
-range(steel_age$Hatch,na.rm=T)
-stock_rec <- data.frame("Year"=annual_sh_abund$Year,"Adults"=annual_sh_abund$sh_a,"Smolts"=smolts)
+stock_rec <- data.frame("Year"=as.numeric(names(annual_smolts_shv2)),"Smolts"=annual_smolts_shv2)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
+
+stock_rec <- merge(keogh_adults,stock_rec,by="Year",all=T)
 
 saveRDS(stock_rec,"steelhead_stockRec.rds")
 
 keogh_sh <- readRDS("steelhead_stockRec.rds")
 keogh_sh_v2 <- readRDS("steelhead_stockRec_v2.rds")
 
-plot(keogh_atlas$Year,keogh_atlas$Total,ylim=c(0,max(keogh_sh$Smolts,keogh_atlas$Total,na.rm=T)),type="l",xlab="Year",ylab="Smolts (assigned to brood year)",xlim=c(1972,2018))
-points(keogh_sh$Year,keogh_sh$Smolts,pch=21,bg="dodgerblue",type="b",lty=2,lwd=1)
+keogh_smolts <- merge(keogh_atlas[,c("Year","Total")],stock_rec,by="Year",all=T)
+
+plot(keogh_smolts$Year,keogh_smolts$Total,type="l",xlab="Year",ylab="Smolt abundance",ylim=c(0,max(keogh_smolts,na.rm=T)))
+points(keogh_smolts$Year,keogh_smolts$Smolts,pch=21,bg="dodgerblue",type="b",lty=2,lwd=1)
 #points(keogh_sh_v2$Year,keogh_sh_v2$Smolts,pch=21,bg="orange",ylim=c(0,15000),type="b",lty=1,lwd=1,col="orange")
 legend("topright",c("Tom Johnston","Current QA/QC"),col=c("black","dodgerblue"),pch=c(NA,21),pt.bg=c(NA,"dodgerblue"),lty=c(1,2),lwd=c(2,2),bty="n")
 
@@ -153,8 +178,8 @@ sh_SR <- lm(log(stock_rec$Smolts/stock_rec$Adults)~stock_rec$Adults)
 abline(sh_SR)
 
 plot(stock_rec$Adults,stock_rec$Smolts,xlab="Adults",ylab="Smolts",ylim=c(0,max(stock_rec$Smolts,na.rm=T)))
-lines(smooth.spline(stock_rec$Adults[!is.na(stock_rec$Smolts)],stock_rec$Smolts[!is.na(stock_rec$Smolts)],cv=T),lwd=2,lty=2,col="dodgerblue")
-curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults))
+lines(smooth.spline(stock_rec$Adults[complete.cases(stock_rec)],stock_rec$Smolts[complete.cases(stock_rec)],cv=T),lwd=2,lty=2,col="dodgerblue")
+curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults,na.rm=T))
 
 # analysis on pink salmon
 plot(pinks$Stock,pinks$Recruits)
@@ -231,7 +256,7 @@ layout(matrix(1:6,nrow=3,ncol=2,byrow=T))
 par(mar=c(4,4,1,1))
 # panel a
 plot(stock_rec$Adults,stock_rec$Smolts,xlab="steelhead adults",ylab="steelhead smolts",ylim=c(0,max(stock_rec$Smolts,na.rm=T)))
-curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults))
+curve(exp(coef(sh_SR)[1])*x*exp(coef(sh_SR)[2]*x),add=T,from=0,to=max(stock_rec$Adults,na.rm=T))
 Corner_text("a)","topleft")
 
 # panel b
@@ -260,7 +285,7 @@ Corner_text("e)","topleft")
 
 #panel f
 plot(ch_SR$Stock,ch_SR$Recruits,xlab="chum adults (t)",ylab="chum adults (t+4)")
-ch_Ricker <- lm(log(ch_SR$Recruits/co_SR$Stock)~ch_SR$Stock)
+ch_Ricker <- lm(log(Recruits/Stock)~Stock,ch_SR[complete.cases(ch_SR),])
 curve(exp(coef(ch_Ricker)[1])*x*exp(coef(ch_Ricker)[2]*x),add=T,from=0,to=max(ch_SR$Stock,na.rm=T))
 Corner_text("f)","topleft")
 
@@ -419,7 +444,6 @@ mtext("Year",side=1,line=2,cex=0.8)
 #dev.off()
 
 
-colnames(steelDailyMax) <- c("Year","DailyMax")
 smolts_compare <- merge(annual_sh_abund[,c("Year","sh_s")],keogh_instream[,c("Year","Smolts")],by="Year",all=T)
 smolts_compare <- merge(smolts_compare,steelDailyMax,by="Year",all=T)
 
