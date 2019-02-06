@@ -458,3 +458,21 @@ matplot(smolts_compare$Year,sapply(2:4,function(x){(smolts_compare[,x]-smolts_co
 abline(h=0,lty=3,lwd=1,col="red")
 
 dev.off()
+
+
+# compile data for Jordan: two data frames
+# First: Annual time-series for brood year stock-recruit
+# Second: Annual time-series for outmigrating year, smolt abundance, smolt body size, smolt age-structure, spawners
+smolt_size <- aggregate(fork_length~smolt_year,data=keogh[keogh$species=="sh" & keogh$life_stage=="s",],FUN=mean,na.rm=T)
+smolt_sd <- aggregate(fork_length~smolt_year,data=keogh[keogh$species=="sh" & keogh$life_stage=="s",],FUN=sd,na.rm=T)
+smolt_size$sigma <- smolt_sd$fork_length
+colnames(smolt_size) <- c("Year","Fork length (mm)","Std. dev.")
+
+smolt_outmigrate <- merge(steelDailyMax,smolt_size,by="Year",all=T)
+steel_outmigrate <- merge(keogh_adults,smolt_outmigrate,by="Year",all=T)
+steel_age <- dcast(steel_age[steel_age$Species=="sh" & steel_age$Stage=="s",],Year~Age,value.var="Abundance")
+
+steel_outmigrate <- merge(steel_outmigrate,steel_age,by="Year",all=T)
+colnames(steel_outmigrate) <- c("Year","Spawner abundance (mark-recap)","Smolt abundance (fence count)","Smolt fork length (mm)","Smolt FL sd","Age 1","Age 2","Age 3","Age 4","Age 5")
+
+steel_outmigrate <- steel_outmigrate[steel_outmigrate$Year>=1975,]
