@@ -477,5 +477,5 @@ colnames(steel_outmigrate) <- c("Year","Spawner abundance (mark-recap)","Smolt a
 
 steel_outmigrate <- steel_outmigrate[steel_outmigrate$Year>=1975,]
 
-write.csv(steel_outmigrate,"steelhead_outmigrate.csv")
-write.csv(stock_rec,"steelhead_brood_SR.csv")
+write.csv(steel_outmigrate,"steelhead_outmigrate.csv",row.names=F)
+write.csv(stock_rec,"steelhead_brood_SR.csv",row.names=F)
