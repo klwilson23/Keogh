@@ -476,3 +476,6 @@ steel_outmigrate <- merge(steel_outmigrate,steel_age,by="Year",all=T)
 colnames(steel_outmigrate) <- c("Year","Spawner abundance (mark-recap)","Smolt abundance (fence count)","Smolt fork length (mm)","Smolt FL sd","Age 1","Age 2","Age 3","Age 4","Age 5")
 
 steel_outmigrate <- steel_outmigrate[steel_outmigrate$Year>=1975,]
+
+write.csv(steel_outmigrate,"steelhead_outmigrate.csv")
+write.csv(stock_rec,"steelhead_brood_SR.csv")
