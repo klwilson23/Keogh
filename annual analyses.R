@@ -13,9 +13,20 @@ keogh_instream <- read.csv("Data/Keogh smolts instream outmigration.csv",strings
 
 keogh_adults <- read.csv("Data/Keogh sh adults.csv",stringsAsFactors=F,header=T)
 
-pinks <- read.csv("Data/Keogh_Pink_Salm.csv",stringsAsFactors = F,header=T)
+pinks <- read.csv("Data/Keogh_Pink_Salm_NuSeds.csv",stringsAsFactors = F,header=T)
 pinks <- pinks[order(pinks$Year),]
 pinks$Stock[pinks$Year<=1997] <- 2*pinks$Stock[pinks$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
+
+clux_pinks <- read.csv("Data/Clux_Pink_Salm_NuSeds.csv",stringsAsFactors = F,header=T)
+clux_pinks <- clux_pinks[order(clux_pinks$Year),]
+
+pink_data <- merge(pinks,clux_pinks,by="Year",all=T)
+pink_data <- pink_data[complete.cases(pink_data),]
+missYears <- lm(log(pink_data$Stock)~log(pink_data$Clux_Stock))
+summary(missYears)
+pinks$Stock[is.na(pinks$Stock)] <- coef(missYears)[1]+coef(missYears)[2]*clux_pinks$Clux_Stock[is.na(pinks$Stock)]
+pinks <- round(pinks,0)
+
 coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
 coho <- coho[order(coho$Year),]
 coho$Adults[coho$Year<=1997] <- NA#2*coho$Adults[coho$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
@@ -30,7 +41,8 @@ coSm <- read.csv("Data/Keogh coho smolts.csv",stringsAsFactors = F,header=T)
 coSm <- coSm[order(coSm$Year),]
 
 # read in and calculate pink salmon stock-recruitment
-pinks <- data.frame("Year"=pinks$Year,"Stock"=c(pinks$Stock[-1],NA),"Recruits"=pinks$Stock)
+pink_lag <- 2
+pinks <- data.frame("Year"=pinks$Year[-((length(pinks$Stock)-pink_lag+1):length(pinks$Stock))],"Stock"=pinks$Stock[-((length(pinks$Stock)-pink_lag+1):length(pinks$Stock))],"Recruits"=pinks$Stock[-(1:pink_lag)])
 plot(pinks$Stock,pinks$Recruits)
 keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
 
@@ -479,3 +491,15 @@ steel_outmigrate <- steel_outmigrate[steel_outmigrate$Year>=1975,]
 
 write.csv(steel_outmigrate,"steelhead_outmigrate.csv",row.names=F)
 write.csv(stock_rec,"steelhead_brood_SR.csv",row.names=F)
+
+# compile information for all salmon species
+colnames(stock_rec) <- c("Year","sh_Adults","sh_Smolts")
+colnames(pinks) <- c("Year","pk_Adults","pk_Recruits")
+colnames(ct_SR) <- c("Year","ct_Adults","ct_Smolts")
+colnames(co_SR) <- c("Year","co_Adults","co_Smolts")
+colnames(dv_SR) <- c("Year","dv_Adults","dv_Smolts")
+colnames(ch_SR) <- c("Year","ch_Adults","ch_Recruits")
+
+keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merge(dv_SR,ch_SR,by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),0)
+
+write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
