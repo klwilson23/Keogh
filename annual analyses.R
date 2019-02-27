@@ -503,3 +503,19 @@ colnames(ch_SR) <- c("Year","ch_Adults","ch_Recruits")
 keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merge(dv_SR,ch_SR,by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),0)
 
 write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
+
+colnames(pre89)
+
+refYear <- 1991
+pre89 <- keogh_StockRec[keogh_StockRec$Year<refYear,]
+post89 <- keogh_StockRec[keogh_StockRec$Year>=refYear,]
+ricker_early <- lm(log(sh_Smolts/sh_Adults)~sh_Adults,data=pre89)
+ricker_late <- lm(log(sh_Smolts/sh_Adults)~sh_Adults,data=post89)
+
+plot(log(sh_Smolts/sh_Adults)~sh_Adults,data=keogh_StockRec,pch=21,bg=ifelse(keogh_StockRec$Year<refYear,"dodgerblue","orange"))
+
+with(keogh_StockRec, text(log(sh_Smolts/sh_Adults)~sh_Adults, labels = keogh_StockRec$Year), pos = 4)
+
+abline(ricker_early,col="dodgerblue")
+abline(ricker_late,col="orange")
+points(keogh_StockRec$sh_Adults[keogh_StockRec$Year==1991],log(keogh_StockRec$sh_Smolts/keogh_StockRec$sh_Adults)[keogh_StockRec$Year==1991],pch=21,bg="grey")
