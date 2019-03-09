@@ -56,7 +56,15 @@ keogh$age_final <- ifelse(!is.na(keogh$total_age),keogh$age_final,keogh$X1_ager)
 keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])})
 keogh$OceanAge <- sapply(keogh$age_final,function(x){sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
 
+keogh$AdultStrat <- sapply(keogh$age_final,function(x){strsplit(x,split="\\.")[[1]][2]})
+keogh$age_final[92] # fish 92 has 1s1 adult life history
+keogh$AdultStrat[92]
+
+keogh$age_final[2] # fish 2 has no adult life history
+keogh$AdultStrat[2]
+
 # example code for validating the string splits for age data when age reads a character sequence like 3.1s2s
+
 
 #keogh[keogh$year==1985 & keogh$species=="sh" & keogh$life_stage=="a",c("age_final","age","ocean_age","OceanAge")]
 
@@ -88,6 +96,21 @@ keogh$age_ocean[keogh$life_stage=="s"] <- 0
 
 keogh$hatch_year <- ifelse(keogh$life_stage=="s",keogh$year - keogh$age, keogh$year-(keogh$total_age)) # if adult, brood year is current year minus total age
 keogh$smolt_year <- keogh$year-(keogh$age_ocean)
+
+steelhead_data <- keogh[keogh$species=="sh",]
+steelhead_data$sampAge <- steelhead_data$age+steelhead_data$age_ocean
+individuals <- steelhead_data[complete.cases(steelhead_data$sampAge,steelhead_data$fork_length),]
+
+adult_life <- individuals[individuals$life_stage=="a"|individuals$life_stage=="k",]
+adult_life$age2
+fresh_ocean_ages <- as.factor(paste(adult_life$age,adult_life$age_ocean,sep="|"))
+
+LC_manifestations <- as.factor(paste(adult_life$age,adult_life$AdultStrat,sep="|"))
+
+levels(LC_manifestations)
+rev(sort(table(LC_manifestations)))
+plot(fork_length~sampAge,data=individuals,pch=21,bg=as.factor(individuals$life_stage))
+lines(smooth.spline(individuals$sampAge,individuals$fork_length))
 
 annual_age <- aggregate(number~smolt_year+hatch_year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
 colnames(annual_age) <- c("Year","Hatch","Species","Stage","Age","Abundance")
