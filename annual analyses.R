@@ -5,12 +5,20 @@ Corner_text <- function(text, location="topright",...)
   legend(location,legend=text, bty ="n", pch=NA,...)
 }
 
+data_check <- "new"
+
+co_lag <- 1 # fixed freshwater residency for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek
+ct_lag <- 2 # fixed freshwater residency for cutthroat: 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal:  Losee et al. (2018) suggests age 2 for coastal cutties
+# Smith 1980 BC FLNRO suggests age 3 for Keogh River
+dv_lag <- 2 # freshwater residence: Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
+ch_lag <- 4 # fixed 4 year life cycle for chum: Neave et al. 1952
+pink_lag <- 2 # fixed 2 year life cycle
+
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 #keogh <- read.csv("Data/Keogh_Database_Final_19nov18.csv",stringsAsFactors = F,header=T)
 keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
 keogh_atlas <- read.csv("Data/Keogh sh smolts Atlas 2015.csv",stringsAsFactors=F,header=T)
 keogh_instream <- read.csv("Data/Keogh smolts instream outmigration.csv",stringsAsFactors=F,header=T)
-
 keogh_adults <- read.csv("Data/Keogh sh adults.csv",stringsAsFactors=F,header=T)
 
 pinks <- read.csv("Data/Keogh_Pink_Salm_NuSeds.csv",stringsAsFactors = F,header=T)
@@ -41,7 +49,6 @@ coSm <- read.csv("Data/Keogh coho smolts.csv",stringsAsFactors = F,header=T)
 coSm <- coSm[order(coSm$Year),]
 
 # read in and calculate pink salmon stock-recruitment
-pink_lag <- 2
 pinks <- data.frame("Year"=pinks$Year[-((length(pinks$Stock)-pink_lag+1):length(pinks$Stock))],"Stock"=pinks$Stock[-((length(pinks$Stock)-pink_lag+1):length(pinks$Stock))],"Recruits"=pinks$Stock[-(1:pink_lag)])
 plot(pinks$Stock,pinks$Recruits)
 keogh <- keogh[keogh$hatchery!=1|is.na(keogh$hatchery),]
@@ -191,7 +198,14 @@ for(i in as.numeric(colnames(annual_prop_sh)))
   annual_smolts_shv2[IIbrood] <- sum(keogh_smoltv2$Smolts[IIsample]*annual_prop_sh[IIage,IIbrood],na.rm=T)
 }
 
-stock_rec <- data.frame("Year"=as.numeric(names(annual_smolts_shv2)),"Smolts"=annual_smolts_shv2)
+if(data_check=="dailyMax")
+{
+  sh_smolts <- annual_smolts_shv2
+}else{
+  sh_smolts <- annual_smolts_sh
+}
+
+stock_rec <- data.frame("Year"=as.numeric(names(sh_smolts)),"Smolts"=sh_smolts)
 stock_rec$Smolts[stock_rec$Smolts==0] <- NA
 
 stock_rec <- merge(keogh_adults,stock_rec,by="Year",all=T)
@@ -232,8 +246,6 @@ ct_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="ct",],FUN=su
 ct_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="ct",],FUN=sum,na.rm=T)
 CT_annual <- dcast(ct_R,year~life_stage,value.var="number")
 
-ct_lag <- 2 # range is 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal:  Losee et al. (2018) suggests age 2 for coastal cutties
-# Smith 1980 BC FLNRO suggests age 3 for Keogh River
 ct_SR <- data.frame("Year"=CT_annual$year[1:(length(CT_annual$year)-ct_lag)],"Stock"=CT_annual$a[1:(length(CT_annual$year)-ct_lag)],"Recruits"=CT_annual$s[(ct_lag+1):length(CT_annual$year)])
 
 plot(ct_SR$Stock,ct_SR$Recruits)
@@ -245,7 +257,6 @@ dv_R <- aggregate(number~year+life_stage,data=keogh[keogh$species=="dv",],FUN=su
 dv_age <- aggregate(number~year+fresh_age+life_stage,data=keogh[keogh$species=="dv",],FUN=sum,na.rm=T)
 DV_annual <- dcast(dv_R,year~life_stage,value.var="number")
 
-dv_lag <- 2 # Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
 dv_SR <- data.frame("Year"=DV_annual$year[1:(length(DV_annual$year)-dv_lag)],"Stock"=DV_annual$a[1:(length(DV_annual$year)-dv_lag)],"Recruits"=DV_annual$s[(dv_lag+1):length(DV_annual$year)])
 
 plot(dv_SR$Stock,dv_SR$Recruits)
@@ -270,7 +281,6 @@ co_R[coho$Year%in%coSm$Year] <- coSm$Smolts
 #plot(cbind(co_R,coSm$Smolts))
 #abline(b=1,a=0)
 
-co_lag <- 1 # fixed lag time for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek
 co_SR <- data.frame("Year"=coho$Year[1:(length(coho$Year)-co_lag)],"Stock"=co_S[1:(length(coho$Year)-co_lag)],"Recruits"=co_R[(co_lag+1):length(coho$Year)])
 
 plot(co_SR$Stock,co_SR$Recruits)
@@ -278,7 +288,6 @@ co_Ricker <- lm(log(co_SR$Recruits/co_SR$Stock)~co_SR$Stock)
 curve(exp(coef(co_Ricker)[1])*x*exp(coef(co_Ricker)[2]*x),add=T,from=0,to=max(co_SR$Stock,na.rm=T))
 
 # compile data on chum salmon
-ch_lag <- 4 # fixed lag time for chum: Neave et al. 1952
 ch_SR <- data.frame("Year"=chum$Year[1:(length(chum$Year)-ch_lag)],"Stock"=chum$Adults[1:(length(chum$Year)-ch_lag)],"Recruits"=chum$Adults[(ch_lag+1):length(chum$Year)])
 
 plot(ch_SR$Stock,ch_SR$Recruits)
@@ -340,7 +349,7 @@ par(mar=c(1,4,1,1))
 YrRange <- c(1953,2018)
 
 salmoYrsReg1 <- c(1953,1975)
-salmoYrsReg2 <- c(1991,2021)
+salmoYrsReg2 <- c(1990,2021)
 
 plot(stock_rec$Year,stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead adults",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
@@ -527,14 +536,13 @@ keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merg
 
 write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
 
-colnames(pre89)
-
 refYear <- 1991
 pre89 <- keogh_StockRec[keogh_StockRec$Year<refYear,]
 post89 <- keogh_StockRec[keogh_StockRec$Year>=refYear,]
 ricker_early <- lm(log(sh_Smolts/sh_Adults)~sh_Adults,data=pre89)
 ricker_late <- lm(log(sh_Smolts/sh_Adults)~sh_Adults,data=post89)
 
+layout(1)
 plot(log(sh_Smolts/sh_Adults)~sh_Adults,data=keogh_StockRec,pch=21,bg=ifelse(keogh_StockRec$Year<refYear,"dodgerblue","orange"))
 
 with(keogh_StockRec, text(log(sh_Smolts/sh_Adults)~sh_Adults, labels = keogh_StockRec$Year), pos = 4)
