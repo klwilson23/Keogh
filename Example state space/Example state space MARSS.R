@@ -1,7 +1,7 @@
 library(MARSS)
 RShowDoc("Quick_Start",package="MARSS")
 
-stockRec <- read.csv("/Data/Keogh_StockRecruitment.csv",stringsAsFactors = F,header=T)
+stockRec <- read.csv("Keogh_StockRecruitment.csv",stringsAsFactors = F,header=T)
 
 ?MARSS
 

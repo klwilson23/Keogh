@@ -8,6 +8,8 @@ mod_list <- list(B = "identity", U = "zero", Q = matrix("q"),
 fit <- MARSS(matrix(Nile, nrow = 1), mod_list)
 
 ## ----dlm-nile-fit-plot, echo=FALSE---------------------------------------
+layout(1)
+par(mar=c(5,4,1,1))
 plot.ts(Nile, las = 1, lwd = 2,
         xlab = "Year", ylab = "Flow of the River Nile")
 lines(seq(start(Nile)[1], end(Nile)[1]),
@@ -67,13 +69,37 @@ mod.list <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R)
 # fit univariate DLM
 dlm1 <- MARSS(dat, inits=inits.list, model=mod.list)
 
+# try fitting time-varying alpha with fixed beta
+m <- 1
+# for process eqn
+B <- diag(m)                     ## 1x1; Identity
+diag(B) <- c(1,1)
+U <- matrix(0,nrow=m,ncol=1)     ## 1x1; both elements = 0
+Q <- matrix(list(0),m,m)         ## 1x1; all 0 for now
+diag(Q) <- c("q.alpha") ## 1x1; diag = (q1,q2)
+
+## ----univ.DLM.obs, eval=TRUE---------------------------------------------
+# for observation eqn
+Z <- array(NA, c(1,m,TT))   ## NxMxT; empty for now
+Z[1,1,] <- rep(1,TT)        ## Nx1; 1's for intercept
+#Z[1,2,] <- CUI.z        ## Nx1; 1's for intercept
+d <- CUI.z
+A <- matrix(0)              ## 1x1; scalar = 0
+R <- matrix("r")            ## 1x1; scalar = r
+inits.list <- list(x0=matrix(rep(0,m), nrow=m))
+mod.list <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R,d=d)
+dlm2 <- MARSS(dat, inits=inits.list, model=mod.list)
+
+dlm2$states
+dlm2$states.se
+
 ## ----dlm-plotdlm1, eval=TRUE, echo=FALSE, fig=TRUE, fig.height=4, fig.width=6, fig.cap='(ref:plotdlm1)'----
 ylabs <- c(expression(alpha[t]), expression(beta[t]))
 colr <- c("darkgreen","blue")
 par(mfrow=c(m,1), mar=c(4,4,0.1,0), oma=c(0,0,2,0.5))
 for(i in 1:m) {
-  mn <- dlm1$states[i,]
-  se <- dlm1$states.se[i,]
+  mn <- dlm2$states[i,]
+  se <- dlm2$states.se[i,]
   plot(years,mn,xlab="",ylab=ylabs[i],bty="n",xaxt="n",type="n",
   ylim=c(min(mn-2*se),max(mn+2*se)))
   lines(years, rep(0,TT), lty="dashed")
@@ -173,9 +199,75 @@ par(mar=c(4,4,1,0), oma=c(0,0,0,0.5))
 acf(t(innov), lwd=2, lag.max=10)
 
 ## ----dlm-SRdata, echo=TRUE, eval=FALSE-----------------------------------
-## load("KvichakSockeye.RData")
+load("Example state space/KvichakSockeye.RData")
 
 ## ----dlm-data-head-------------------------------------------------------
 # head of data file
 head(SRdata)
+
+# get predictor variable
+TT <- nrow(SRdata)
+
+# get the data
+dat <- matrix(log(SRdata$Rec/SRdata$Sp),nrow=1)
+
+pdot2 <- SRdata$PDO.t2
+pdot3 <- SRdata$PDO.t3
+
+## z-score the PDO predictors
+sp.t <- matrix(SRdata$Sp,nrow=1)
+pdot2.z <- matrix((pdot2 - mean(pdot2))/sqrt(var(pdot2)), nrow=1)
+pdot3.z <- matrix((pdot3 - mean(pdot3))/sqrt(var(pdot3)), nrow=1)
+# number of regr params (slope + intercept)
+m <- 1 # intercept + pdot2 + pdot3
+B <- diag(m)                     ## 2x2; Identity
+U <- "zero"#matrix(0,nrow=m,ncol=1)     ## 2x1; both elements = 0
+Q <- matrix(list(0),m,m)         ## 2x2; all 0 for now
+diag(Q) <- c("q.pdo") ## 2x2; diag = (q1,q2)
+
+## ----univ.DLM.obs, eval=TRUE---------------------------------------------
+# for observation eqn
+Z <- array(NA, c(1,m,TT))   ## NxMxT; empty for now
+#Z[1,1,] <- rep(1,TT)        ## Nx1; 1's for intercept
+Z[1,1,] <- pdot2.z            ## Nx1; predictor variable #1
+#Z[1,2,] <- pdot3.z            ## Nx1; predictor variable #1
+d <- rbind(1,sp.t)
+A <- matrix(0)              ## 1x1; scalar = 0
+R <- matrix("r")            ## 1x1; scalar = r
+
+## ----univ.DLM.list, eval=TRUE--------------------------------------------
+# only need starting values for regr parameters
+inits.list <- list(x0=matrix(rep(10,m), nrow=m))
+# list of model matrices & vectors
+mod.list <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R,d=d)
+
+## ----univ.DLM.fit, eval=TRUE---------------------------------------------
+# fit univariate DLM
+dlmSR <- MARSS(dat, inits=inits.list, model=mod.list,control=list(maxit=2000,conv.test.slope.tol=0.1))
+dlmSR$model
+dlmSR$states
+mean(colSums(dlmSR$states))
+MARSSparamCIs(dlmSR)
+dlmSR$coef
+
+layout(1)
+plot(Rec~Sp,data=SRdata)
+curve(exp(5.20e-01+mean(colSums(dlmSR$states)))*x*exp(-2.45e-05*x),add=TRUE,lwd=2,col="dodgerblue")
+## ----dlm-plotdlm1, eval=TRUE, echo=FALSE, fig=TRUE, fig.height=4, fig.width=6, fig.cap='(ref:plotdlm1)'----
+ylabs <- c(expression(alpha[t]), expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
+colr <- c("darkgreen","dodgerblue","orange")
+par(mfrow=c(m,1), mar=c(4,4,0.1,0), oma=c(0,0,2,0.5))
+for(i in 1:m) {
+  mn <- dlmSR$states[i,]
+  se <- dlmSR$states.se[i,]
+  plot(SRdata$brood.yr,mn,xlab="",ylab=ylabs[i],bty="n",xaxt="n",type="n",
+       ylim=c(min(mn-2*se),max(mn+2*se)))
+  lines(SRdata$brood.yr, rep(0,TT), lty="dashed")
+  lines(SRdata$brood.yr, mn, col=colr[i], lwd=3)
+  lines(SRdata$brood.yr, mn+2*se, col=colr[i])
+  lines(SRdata$brood.yr, mn-2*se, col=colr[i])
+}
+axis(1,at=seq(min(SRdata$brood.yr),max(SRdata$brood.yr),5))
+mtext("Brood year", 1, line=3)
+
 
