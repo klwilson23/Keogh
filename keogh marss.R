@@ -43,7 +43,7 @@ mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A,
 
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
 fit <- MARSS(adultDat, model=mod.list, control=list(minit=200,maxit=50000+200), inits=list(A=matrix(m,ns,1)))
-
+fit$AICc
 Z.est = coef(fit, type="matrix")$Z
 H.inv = 1
 if(ncol(Z.est)>1) H.inv = varimax(coef(fit, type="matrix")$Z)$rotmat
