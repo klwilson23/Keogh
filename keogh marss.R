@@ -10,7 +10,15 @@ SRdata <- subset(SRdata,Year>=1976 & Year<=2013)
 sdScale <- attr(scale(SRdata[,-1],center=FALSE,scale=TRUE),"scaled:scale")
 SRdata[,-1] <- scale(SRdata[,-1],center=FALSE,scale=TRUE)
 
+environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
+environment <- environment[environment$year>=min(SRdata$Year) & environment$year<=max(SRdata$Year),]
+sdCovars <- attr(scale(environment,center=TRUE,scale=TRUE),"scaled:scale")
+covarScale <- scale(environment,center=TRUE,scale=TRUE)
+covarScale[is.na(covarScale)] <- 0
+
 newDat <- SRdata[,-c(5,13)]
+
+# run a DFA on the adult data
 adultDat <- newDat[,c(2,4,5,7,9,11)]
 adultDat <- t(as.matrix(adultDat))
 colnames(adultDat) <- newDat$Year
@@ -76,3 +84,58 @@ p + facet_wrap(~Species) + xlab("") + ylab("Abundance")
 layout(matrix(1:6,nrow=3,ncol=2))
 apply(residuals(fit)$state.residuals[, 1:30], 1, acf)
 mtext("State Residuals ACF", outer = TRUE, side = 3)
+
+# run a DLM on stock-recruitment for steelhead only
+SRdata <- read.csv("Keogh_StockRecruitment.csv",header=TRUE)
+SRdata <- subset(SRdata,Year>=1976 & Year<=2013)
+steelhead <- SRdata[,c("Year","sh_Adults","sh_Smolts")]
+
+# including process and observation error
+# adult and preciptation covariates only affect observation model
+# NPGO affects process model
+A <- U <- "zero"; Z <- "identity"
+B <- "diagonal and unequal"
+Q <- "equalvarcov"
+D <- "unconstrained"
+d <- t(matrix(c(steelhead$sh_Adults,covarScale[,"precip_1"]),ncol=2))
+row.names(d) <- c("adults","precip")
+C <- "unconstrained"
+c <- t(matrix(covarScale[,"npgo"]))
+row.names(c) <- c("npgo")
+R <- "diagonal and unequal"
+x0 <- "unequal"
+tinitx <- 1
+ln_RS <- steelhead$ln_RS <- log(steelhead$sh_Smolts/steelhead$sh_Adults)
+model.list <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,D=D,d=d,C=C,c=c,x0=x0,tinitx=tinitx)
+keoghSR <- MARSS(ln_RS, model=model.list)
+
+library(broom)
+library(ggplot2)
+d <- augment(keoghSR, interval="confidence")
+d$Year <- d$t + 1975
+p <- ggplot(data = d) + 
+  geom_line(aes(Year, .fitted)) +
+  geom_ribbon(aes(x=Year, ymin=.conf.low, ymax=.conf.up), linetype=2, alpha=0.5)
+p <- p + geom_point(data=steelhead, mapping = aes(x=Year, y=ln_RS))
+p + xlab("") + ylab("ln_RS")
+
+
+# including process and observation error
+# adult and precipitation covariates only affect observation model
+# NPGO affects process model
+# time-varying affect on adults
+A <- U <- "zero"; Z <- "identity"
+B <- "diagonal and unequal"
+Q <- "equalvarcov"
+D <- "unconstrained"
+d <- t(matrix(c(steelhead$sh_Adults,covarScale[,"precip_1"]),ncol=2))
+row.names(d) <- c("adults","precip")
+C <- "unconstrained"
+c <- t(matrix(covarScale[,"npgo"]))
+row.names(c) <- c("npgo")
+R <- "diagonal and unequal"
+x0 <- "unequal"
+tinitx <- 1
+ln_RS <- log(steelhead$sh_Smolts/steelhead$sh_Adults)
+model.list <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,D=D,d=d,C=C,c=c,x0=x0,tinitx=tinitx)
+keoghDLM <- MARSS(ln_RS, model=model.list)
