@@ -62,6 +62,8 @@ fit <- MARSS(dat, model=mod.list, control=list(maxit=5000), inits=list(A=matrix(
 
 ## ------------------------------------------------------------------------
 coef(fit)$B
+coef(fit)$A
+coef(fit)$Q
 
 ## ----mssmiss-snotelplotstates, include=FALSE-----------------------------
 library(broom)
@@ -165,3 +167,54 @@ p <- ggplot(y3, aes(x=Date, y=SWE)) + geom_line()
 p + facet_wrap(~Station) + 
   scale_x_date(breaks=as.Date(paste0(2011:2013,"-01-01")), labels=2011:2013)
 
+
+#
+swe.yr <- snotel
+swe.yr <- swe.yr[swe.yr$Station.Id %in% y$Station.Id, ]
+swe.yr$Station <- droplevels(swe.yr$Station)
+dat.yr <- snotel
+dat.yr <- dat.yr[dat.yr$Station.Id %in% y$Station.Id, ]
+dat.yr$Station <- droplevels(dat.yr$Station)
+dat.yr$Month <- factor(dat.yr$Month, level = month.abb)
+dat.yr <- reshape2::acast(dat.yr, Station ~ Year + Month, value.var = "SWE")
+
+period <- 12
+TT <- dim(dat.yr)[2]
+cos.t <- cos(2 * pi * seq(TT)/period)
+sin.t <- sin(2 * pi * seq(TT)/period)
+c.seas <- rbind(cos.t, sin.t)
+
+ns <- dim(dat.yr)[1]
+B <- "zero"
+Q <- matrix(1)
+R <- "unconstrained"
+U <- "zero"
+x0 <- "zero"
+Z <- matrix(paste0("z", 1:ns), ns, 1)
+A <- "unequal"
+mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, 
+                    x0 = x0)
+C <- matrix(c("c1", "c2"), 1, 2)
+c <- c.seas
+mod.list.seas <- list(B = B, U = U, Q = Q, A = A, R = R, Z = Z, 
+                      C = C, c = c, x0 = x0, tinitx = 0)
+
+m <- apply(dat.yr, 1, mean, na.rm = TRUE)
+fit.seas <- MARSS(dat.yr, model = mod.list.seas, control = list(maxit = 500), 
+                  inits = list(A = matrix(m, ns, 1)))
+
+dd <- MARSShatyt(fit.seas)$ytT
+rownames(dd) <- rownames(dat.yr)
+colnames(dd) <- colnames(dat.yr)
+ddd <- reshape2::melt(dd)
+ddd$Var2 <- factor(ddd$Var2, levels = paste0(rep(1981:2013, each = 12), 
+                                             "_", month.abb))
+colnames(ddd) <- c("Station", "Year_Month", "SWE")
+ddd <- ddd[order(ddd$Station, ddd$Year_Month), ]
+ddd$Date <- swe.yr$Date
+ddd$Year <- swe.yr$Year
+ddd <- subset(ddd, Year < 1990)
+p <- ggplot(data = ddd) + geom_line(aes(x = Date, y = SWE))
+p <- p + geom_point(data = subset(swe.yr, Year < 1990), mapping = aes(x = Date, 
+                                                                      y = SWE))
+p + facet_wrap(~Station) + xlab("") + ylab("SWE")

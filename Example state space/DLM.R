@@ -70,10 +70,10 @@ mod.list <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R)
 dlm1 <- MARSS(dat, inits=inits.list, model=mod.list)
 
 # try fitting time-varying alpha with fixed beta
-m <- 1
+m <- 2
 # for process eqn
 B <- diag(m)                     ## 1x1; Identity
-diag(B) <- c(1,1)
+diag(B) <- c(1)
 U <- matrix(0,nrow=m,ncol=1)     ## 1x1; both elements = 0
 Q <- matrix(list(0),m,m)         ## 1x1; all 0 for now
 diag(Q) <- c("q.alpha") ## 1x1; diag = (q1,q2)
@@ -82,13 +82,14 @@ diag(Q) <- c("q.alpha") ## 1x1; diag = (q1,q2)
 # for observation eqn
 Z <- array(NA, c(1,m,TT))   ## NxMxT; empty for now
 Z[1,1,] <- rep(1,TT)        ## Nx1; 1's for intercept
-#Z[1,2,] <- CUI.z        ## Nx1; 1's for intercept
+Z[1,2,] <- CUI.z        ## Nx1; 1's for intercept
 d <- CUI.z
 A <- matrix(0)              ## 1x1; scalar = 0
 R <- matrix("r")            ## 1x1; scalar = r
 inits.list <- list(x0=matrix(rep(0,m), nrow=m))
-mod.list <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R,d=d)
-dlm2 <- MARSS(dat, inits=inits.list, model=mod.list)
+mod.list1 <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R,d=d)
+mod.list2 <- list(B=B, U=U, Q=Q, Z=Z, A=A, R=R)
+dlm2 <- MARSS(dat, inits=inits.list, model=mod.list2)
 
 dlm2$states
 dlm2$states.se
@@ -230,7 +231,7 @@ diag(Q) <- c("q.pdo") ## 2x2; diag = (q1,q2)
 Z <- array(NA, c(1,m,TT))   ## NxMxT; empty for now
 #Z[1,1,] <- rep(1,TT)        ## Nx1; 1's for intercept
 Z[1,1,] <- pdot2.z            ## Nx1; predictor variable #1
-#Z[1,2,] <- pdot3.z            ## Nx1; predictor variable #1
+#Z[1,1,] <- pdot3.z            ## Nx1; predictor variable #1
 d <- rbind(1,sp.t)
 A <- matrix(0)              ## 1x1; scalar = 0
 R <- matrix("r")            ## 1x1; scalar = r
@@ -252,7 +253,7 @@ dlmSR$coef
 
 layout(1)
 plot(Rec~Sp,data=SRdata)
-curve(exp(5.20e-01+mean(colSums(dlmSR$states)))*x*exp(-2.45e-05*x),add=TRUE,lwd=2,col="dodgerblue")
+curve(exp(dlmSR$coef["D.(Y1,1)"]+mean(colSums(dlmSR$states)))*x*exp(dlmSR$coef["D.(Y1,2)"]*x),add=TRUE,lwd=2,col="dodgerblue")
 ## ----dlm-plotdlm1, eval=TRUE, echo=FALSE, fig=TRUE, fig.height=4, fig.width=6, fig.cap='(ref:plotdlm1)'----
 ylabs <- c(expression(alpha[t]), expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
 colr <- c("darkgreen","dodgerblue","orange")
