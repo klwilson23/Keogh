@@ -37,7 +37,7 @@ pinks <- round(pinks,0)
 
 coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
 coho <- coho[order(coho$Year),]
-coho$Adults[coho$Year<=1997] <- NA#2*coho$Adults[coho$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
+#coho$Adults[coho$Year<=1997] <- NA#2*coho$Adults[coho$Year<=1997] # from Bailey et al. 2018 - Pink salmon prior to 1997 sampled by stream walks and need to be doubled to correct for abundance patterns. After 1997 pink salmon counted by resistivitycounter.
 
 chum <- read.csv("Data/Keogh chum adults.csv",stringsAsFactors = F,header=T)
 chum <- chum[order(chum$Year),]
@@ -295,7 +295,7 @@ ch_Ricker <- lm(log(ch_SR$Recruits/ch_SR$Stock)~ch_SR$Stock)
 curve(exp(coef(ch_Ricker)[1])*x*exp(coef(ch_Ricker)[2]*x),add=T,from=0,to=max(ch_SR$Stock,na.rm=T))
 
 
-tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
+#tiff("keogh ricker.tiff",compression="lzw",units="in",height=7,width=8,res=800)
 layout(matrix(1:6,nrow=3,ncol=2,byrow=T))
 par(mar=c(4,4,1,1))
 # panel a
@@ -333,16 +333,16 @@ ch_Ricker <- lm(log(Recruits/Stock)~Stock,ch_SR[complete.cases(ch_SR),])
 curve(exp(coef(ch_Ricker)[1])*x*exp(coef(ch_Ricker)[2]*x),add=T,from=0,to=max(ch_SR$Stock,na.rm=T))
 Corner_text("f)","topleft")
 
-dev.off()
+#dev.off()
 
-mat1 <- matrix(sapply(1:18,FUN=function(x){rep(x,3)}),nrow=18,ncol=3,byrow=F)
-mat1 <- matrix(sapply(1:ncol(mat1),FUN=function(x){rbind(rep(mat1[,x],3))}),nrow=18,ncol=9,byrow=F)
+mat1 <- matrix(sapply(1:12,FUN=function(x){rep(x,3)}),nrow=18,ncol=2,byrow=F)
+mat1 <- matrix(sapply(1:ncol(mat1),FUN=function(x){rbind(rep(mat1[,x],3))}),nrow=18,ncol=6,byrow=F)
 mat1 <- rbind(mat1,rep(0,ncol(mat1)))
 mat1 <- rbind(rep(0,ncol(mat1)),mat1)
 
 regimePlot <- function(){c(rect(xleft=salmoYrsReg1[1],xright=salmoYrsReg1[2],ybottom=-1e6,ytop=1e6,col="grey90",border=NA),rect(xleft=salmoYrsReg2[1],xright=salmoYrsReg2[2],ybottom=-1e6,ytop=1e6,col="grey70",border=NA))}
 
-tiff("keogh time series since 1953.tiff",compression="lzw",units="in",height=9,width=9,res=800)
+#tiff("keogh time series since 1953.tiff",compression="lzw",units="in",height=9,width=9,res=800)
 
 layout(mat1)
 par(mar=c(1,4,1,1))
@@ -351,71 +351,40 @@ YrRange <- c(1953,2018)
 salmoYrsReg1 <- c(1953,1975)
 salmoYrsReg2 <- c(1990,2021)
 
-plot(stock_rec$Year,stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead adults",panel.first=regimePlot())
+plot(stock_rec$Year,stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-text("Early",x=1960,y=580)
-text("Peak",x=1985,y=580)
-text("Collapsed",x=2010,y=580)
 
 title("Spawners",line=1,xpd=NA)
-
-plot(pinks$Year,pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t)",panel.first=regimePlot())
+plot(pinks$Year,pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(ct_SR$Year,ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat adults (t)",panel.first=regimePlot())
+plot(ct_SR$Year,ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(dv_SR$Year,dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden adults (t)",panel.first=regimePlot())
+plot(dv_SR$Year,dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(co_SR$Year,co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho adults (t)",panel.first=regimePlot())
+plot(co_SR$Year,co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho (t)",panel.first=regimePlot())
+axis(1,tick=T,labels=FALSE)
+plot(ch_SR$Year,ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum adults (t)",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
 mtext("Year",side=1,line=2,cex=0.8)
 
 # plot smolts
-plot(stock_rec$Year,stock_rec$Smolts,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead smolts",panel.first=regimePlot())
+plot(stock_rec$Year,stock_rec$Smolts,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
 title("Recruits",line=1,xpd=NA)
-
-plot(pinks$Year,pinks$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t+2)",panel.first=regimePlot())
+plot(pinks$Year,pinks$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Adults (t+2)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(ct_SR$Year,ct_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat smolts (t+2)",panel.first=regimePlot())
+plot(ct_SR$Year,ct_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+2)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(dv_SR$Year,dv_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden smolts (t+4)",panel.first=regimePlot())
+plot(dv_SR$Year,dv_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+4)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(co_SR$Year,co_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho smolts (t+1)",panel.first=regimePlot())
+plot(co_SR$Year,co_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+1)",panel.first=regimePlot())
+axis(1,tick=T,labels=FALSE)
+plot(ch_SR$Year,ch_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Adults (t+4)",panel.first=regimePlot())
 axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum adults (t+4)",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
 mtext("Year",side=1,line=2,cex=0.8)
+#dev.off()
 
-# plot smolt production
-plot(stock_rec$Year,stock_rec$Smolts/stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead",panel.first=regimePlot())
-
-axis(1,tick=T,labels=FALSE)
-title("Recruits per spawner",line=1,xpd=NA)
-plot(pinks$Year,pinks$Recruits/pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(ct_SR$Year,ct_SR$Recruits/ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(dv_SR$Year,dv_SR$Recruits/dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(co_SR$Year,co_SR$Recruits/co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Recruits/ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
-mtext("Year",side=1,line=2,cex=0.8)
-dev.off()
-
-tiff("keogh time series since 1975.tiff",compression="lzw",units="in",height=9,width=9,res=800)
+#tiff("keogh time series since 1975.tiff",compression="lzw",units="in",height=9,width=9,res=800)
 
 layout(mat1)
 par(mar=c(1,4,1,1))
@@ -424,74 +393,47 @@ YrRange <- c(1975,2018)
 salmoYrsReg1 <- c(1953,1975)
 salmoYrsReg2 <- c(1990,2021)
 
+co_SR$Stock[co_SR$Year<=1997] <- NA
+
 plot(stock_rec$Year,stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead adults",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-text("Early",x=1960,y=580)
-text("Peak",x=1985,y=580)
-text("Collapsed",x=2010,y=580)
 
 title("Spawners",line=1,xpd=NA)
 
-plot(pinks$Year,pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t)",panel.first=regimePlot())
+plot(pinks$Year,pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(ct_SR$Year,ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat adults (t)",panel.first=regimePlot())
+plot(ct_SR$Year,ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(dv_SR$Year,dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden adults (t)",panel.first=regimePlot())
+plot(dv_SR$Year,dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-plot(co_SR$Year,co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho adults (t)",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum adults (t)",panel.first=regimePlot())
+plot(co_SR$Year,co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho (t)",panel.first=regimePlot())
+axis(1,tick=T,labels=FALSE)
+plot(ch_SR$Year,ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum (t)",panel.first=regimePlot())
 axis(1,tick=T,labels=TRUE)
 
 mtext("Year",side=1,line=2,cex=0.8)
 
 # plot smolts
-plot(stock_rec$Year,stock_rec$Smolts,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead smolts",panel.first=regimePlot())
+plot(stock_rec$Year,stock_rec$Smolts,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
 title("Recruits",line=1,xpd=NA)
-
-plot(pinks$Year,pinks$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink adults (t+2)",panel.first=regimePlot())
+plot(pinks$Year,pinks$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Adults (t+2)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(ct_SR$Year,ct_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat smolts (t+2)",panel.first=regimePlot())
+plot(ct_SR$Year,ct_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+2)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(dv_SR$Year,dv_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden smolts (t+4)",panel.first=regimePlot())
+plot(dv_SR$Year,dv_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+4)",panel.first=regimePlot())
 axis(1,tick=T,labels=FALSE)
-
-plot(co_SR$Year,co_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho smolts (t+1)",panel.first=regimePlot())
+plot(co_SR$Year,co_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Smolts (t+1)",panel.first=regimePlot())
+axis(1,tick=T,labels=FALSE)
+plot(ch_SR$Year,ch_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Adults (t+4)",panel.first=regimePlot())
 axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Recruits,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum adults (t+4)",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
 mtext("Year",side=1,line=2,cex=0.8)
-
-# plot smolt production
-plot(stock_rec$Year,stock_rec$Smolts/stock_rec$Adults,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Steelhead",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-title("Recruits per spawner",line=1,xpd=NA)
-plot(pinks$Year,pinks$Recruits/pinks$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Pink",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(ct_SR$Year,ct_SR$Recruits/ct_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Cutthroat",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(dv_SR$Year,dv_SR$Recruits/dv_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Dolly varden",panel.first=regimePlot())
-axis(1,tick=T,labels=FALSE)
-plot(co_SR$Year,co_SR$Recruits/co_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Coho",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
-plot(ch_SR$Year,ch_SR$Recruits/ch_SR$Stock,xlim=YrRange,type="l",lwd=2,col="dodgerblue",xaxt="n",xlab="",ylab="Chum",panel.first=regimePlot())
-axis(1,tick=T,labels=TRUE)
-
-mtext("Year",side=1,line=2,cex=0.8)
-dev.off()
 
 
 smolts_compare <- merge(annual_sh_abund[,c("Year","sh_s")],keogh_instream[,c("Year","Smolts")],by="Year",all=T)
 smolts_compare <- merge(smolts_compare,steelDailyMax,by="Year",all=T)
 
-jpeg("smolt abundance by sample year.jpeg",units="in",res=800,width=7,height=4)
+#jpeg("smolt abundance by sample year.jpeg",units="in",res=800,width=7,height=4)
 layout(matrix(1:2,ncol=2,byrow=F))
 par(mar=c(5,4,1,1))
 matplot(smolts_compare$Year,smolts_compare[,-1],type="l",lty=c(1,1,1),lwd=2,col=c("black","dodgerblue","orange"),xlab="Outmigrating year",ylab="Smolt abundance")
@@ -501,7 +443,7 @@ legend("topright",c("Current database","Instream","Daily maximum"),bty="n",lwd=2
 matplot(smolts_compare$Year,sapply(2:4,function(x){(smolts_compare[,x]-smolts_compare[,3])/sd(smolts_compare[,3],na.rm=T)}),type="l",lty=1,lwd=2,col=c("black","dodgerblue","orange"),xlab="Outmigrating year",ylab="Bias (standardized residuals)")
 abline(h=0,lty=3,lwd=1,col="red")
 
-dev.off()
+#dev.off()
 
 
 # compile data for Jordan: two data frames
