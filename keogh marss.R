@@ -471,13 +471,13 @@ C <- c <- A <- U <- "zero"
 Nyears <- nrow(steelhead)
 Nspecies <- 3
 m <- 2
-Z <- array(NA,c(Nspecies,m,Nyears))
+Z <- array(0,c(Nspecies,m*Nspecies,Nyears))
 Z[1,1,] <- rep(1,Nyears) # time-varying alpha
 Z[1,2,] <- steelhead$sh_Adults # time-varying beta
-Z[2,1,] <- rep(1,Nyears) # time-varying alpha
-Z[2,2,] <- dv_Adults.hat # time-varying beta
-Z[3,1,] <- rep(1,Nyears) # time-varying alpha
-Z[3,2,] <- ct_Adults.hat # time-varying beta
+Z[2,3,] <- rep(1,Nyears) # time-varying alpha
+Z[2,4,] <- dv_Adults.hat # time-varying beta
+Z[3,5,] <- rep(1,Nyears) # time-varying alpha
+Z[3,6,] <- ct_Adults.hat # time-varying beta
 #Z[1,3,] <- covarScale[,"precip_1"] # time-varying precipitation
 
 D <- "unconstrained"
@@ -488,17 +488,31 @@ row.names(d) <- c("precip")
 #c <- t(matrix(covarScale[,"npgo"]))
 #row.names(c) <- c("npgo")
 
-#Q <- matrix(list(0),m*Nspecies,m*Nspecies)        ## 2x2; all 0 for now
-Q <- "unconstrained"
-#diag(Q) <- c("q.sh_alpha","q.sh_adults","q.dv_alpha","q.dv_adults","q.ct_alpha","q.ct_adults") ## 2x2; diag = (q1,q2)
-B <- diag(m)
+Q <- matrix(list(0),m*Nspecies,m*Nspecies)        ## 2x2; all 0 for now
+#diag(Q) <- rep(c("q.alpha","q.beta"),Nspecies)
+diag(Q) <- c("q.sh_alpha","q.sh_adults","q.dv_alpha","q.dv_adults","q.ct_alpha","q.ct_adults") ## 2x2; diag = (q1,q2)
+Q[1,3] <- "q.corr_alpha1"
+Q[3,1] <- "q.corr_alpha1"
+Q[3,5] <- "q.corr_alpha2"
+Q[5,3] <- "q.corr_alpha2"
+Q[1,5] <- "q.corr_alpha3"
+Q[5,1] <- "q.corr_alpha3"
 
-R <- "diagonal and unequal"
+Q[2,4] <- "q.corr_beta1"
+Q[4,2] <- "q.corr_beta1"
+Q[4,6] <- "q.corr_beta2"
+Q[6,4] <- "q.corr_beta2"
+Q[2,6] <- "q.corr_beta3"
+Q[6,2] <- "q.corr_beta3"
+
+B <- diag(m*Nspecies)
+
+R <- "unconstrained"
 #R <- diag(0.01,Nspecies)
 x0 <- "zero"
 tinitx <- 0
-model.listDLMspecies <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,d=d,C=C,c=c,x0=x0)
-ln_RS_sh <- ln_RS
+model.listDLMspecies <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,d=d,C=C,c=c,x0=x0,tinitx=0)
+ln_RS_sh <- log(steelhead$sh_Smolts/steelhead$sh_Adults)
 ln_RS_dv <- log(dolly$dv_Smolts/dolly$dv_Adults)
 ln_RS_ct <- log(cutty$ct_Smolts/cutty$ct_Adults)
 dat <- rbind(ln_RS_sh,ln_RS_dv,ln_RS_ct)
@@ -516,13 +530,14 @@ keoghDLMall$coef
 
 coef(keoghDLMspecies)
 
-keoghDLMspecies <- augment(keoghDLMspecies, interval="confidence")
-keoghDLMspecies$Year <- keoghDLMspecies$t + 1975
-p <- ggplot(data = keoghDLMspecies) + 
+keoghAllfit <- augment(keoghDLMspecies, interval="confidence")
+keoghAllfit$Year <- keoghAllfit$t + 1975
+keoghAllfit$Species <- keoghAllfit$.rownames
+p <- ggplot(data = keoghAllfit) + 
   geom_line(aes(Year, .fitted)) +
   geom_ribbon(aes(x=Year, ymin=.conf.low, ymax=.conf.up), linetype=2, alpha=0.5)
-p <- p + geom_point(data=steelhead, mapping = aes(x=Year, y=ln_RS))
-p + xlab("") + ylab("ln_RS")
+p <- p + geom_point(data=keoghAllfit, mapping = aes(x=Year, y=y))
+p + xlab("") + ylab("ln_RS") + facet_wrap(~Species)
 
 layout(1)
 plot(sh_Smolts~sh_Adults,data=steelhead,pch=21,bg=ifelse(steelhead$Year>=1991,"orange","dodgerblue"))
@@ -530,21 +545,30 @@ curve(exp(keoghDLM$coef["D.(Y1,alpha)"]+keoghDLM$coef["D.(Y1,precip)"]*0)*x*exp(
 curve(exp(keoghDLM$coef["D.(Y1,alpha)"]+keoghDLM$coef["D.(Y1,precip)"]*0)*x*exp(colSums(keoghDLM$states)[Nyears]*x),add=TRUE,lwd=2,col="orange",lty=2)
 
 
-ylabs <- c(expression(alpha[t]),expression("adults"~beta[t]))#, expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
-colr <- c("darkgreen","dodgerblue","orange")
-par(mfrow=c(m,1), mar=c(4,4,0.1,0), oma=c(0,0,2,0.5))
-for(i in 1:m) {
-  mn <- keoghDLMall$states[i,]
-  se <- keoghDLMall$states.se[i,]
-  plot(steelhead$Year,mn,xlab="",ylab=ylabs[i],bty="n",xaxt="n",type="n",
-       ylim=c(min(mn-2*se),max(mn+2*se)))
+ylabs <- rep(c(expression(alpha[t]),expression(beta[t]~"adults"),expression(K[t])),Nspecies)#, expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
+colr <- rep(c("darkgreen","dodgerblue","orange"),Nspecies)
+
+layout(matrix(1:((m+1)*Nspecies),nrow=(m+1),ncol=Nspecies))
+par(mar=c(5,5,1,1))
+state <- 1
+for(j in 1:Nspecies)
+  {
+  for(i in 1:m) 
+  {
+    mn <- keoghDLMspecies$states[state,]
+    se <- keoghDLMspecies$states.se[state,]
+    plot(steelhead$Year,mn,xlab="",ylab=ylabs[state],bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)))
+    lines(steelhead$Year, rep(0,Nyears), lty="dashed")
+    lines(steelhead$Year, mn, col=colr[i], lwd=3)
+    lines(steelhead$Year, mn+2*se, col=colr[i])
+    lines(steelhead$Year, mn-2*se, col=colr[i])
+    state <- state+1
+  }
+  mn <- pmax(0,-log(keoghDLMspecies$states[j*m-1,])/keoghDLMspecies$states[j*m,])
+  plot(steelhead$Year,mn,xlab="",ylab=ylabs[3],bty="n",xaxt="n",type="n",cex.lab=2)
   lines(steelhead$Year, rep(0,Nyears), lty="dashed")
-  lines(steelhead$Year, mn, col=colr[i], lwd=3)
-  lines(steelhead$Year, mn+2*se, col=colr[i])
-  lines(steelhead$Year, mn-2*se, col=colr[i])
+  lines(steelhead$Year, mn, col=colr[3], lwd=3)
+  axis(1,at=seq(min(steelhead$Year),max(steelhead$Year),5),cex=2)
+  mtext("Brood year", 1, line=3,cex=1)
+  abline(v=1991)
 }
-axis(1,at=seq(min(steelhead$Year),max(steelhead$Year),5))
-mtext("Brood year", 1, line=3)
-abline(v=1991)
-
-
