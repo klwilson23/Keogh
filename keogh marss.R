@@ -131,6 +131,9 @@ mtext("State Residuals ACF", outer = TRUE, side = 3)
 SRdata <- read.csv("Keogh_StockRecruitment.csv",header=TRUE)
 SRdata <- subset(SRdata,Year>=1976 & Year<=2013)
 steelhead <- SRdata[,c("Year","sh_Adults","sh_Smolts")]
+dolly <- SRdata[,c("Year","dv_Adults","dv_Smolts")]
+cutty <- SRdata[,c("Year","ct_Adults","ct_Smolts")]
+
 
 # including process and observation error
 # adult and preciptation covariates only affect observation model
@@ -462,10 +465,6 @@ abline(v=1991)
 # precipitation covariates only affect observation model
 # time-varying beta & alpha
 # run a DLM on stock-recruitment for steelhead only
-SRdata <- read.csv("Keogh_StockRecruitment.csv",header=TRUE)
-SRdata <- subset(SRdata,Year>=1976 & Year<=2013)
-dolly <- SRdata[,c("Year","dv_Adults","dv_Smolts")]
-cutty <- SRdata[,c("Year","ct_Adults","ct_Smolts")]
 
 C <- c <- A <- U <- "zero"
 Nyears <- nrow(steelhead)
@@ -545,11 +544,14 @@ curve(exp(keoghDLM$coef["D.(Y1,alpha)"]+keoghDLM$coef["D.(Y1,precip)"]*0)*x*exp(
 curve(exp(keoghDLM$coef["D.(Y1,alpha)"]+keoghDLM$coef["D.(Y1,precip)"]*0)*x*exp(colSums(keoghDLM$states)[Nyears]*x),add=TRUE,lwd=2,col="orange",lty=2)
 
 
-ylabs <- rep(c(expression(alpha[t]),expression(beta[t]~"adults"),expression(K[t])),Nspecies)#, expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
+ylabs <- rep(c(expression(alpha[t]),expression(beta[t]~"adults")),Nspecies)#, expression("pdo 2"~beta[t]),expression("pdo 3"~beta[t]))
+
+titles <- c("Steelhead","Dolly Varden","Cutthroat")
+
 colr <- rep(c("darkgreen","dodgerblue","orange"),Nspecies)
 
 layout(matrix(1:((m+1)*Nspecies),nrow=(m+1),ncol=Nspecies))
-par(mar=c(5,5,1,1))
+par(mar=c(5,5,2,1))
 state <- 1
 for(j in 1:Nspecies)
   {
@@ -557,7 +559,11 @@ for(j in 1:Nspecies)
   {
     mn <- keoghDLMspecies$states[state,]
     se <- keoghDLMspecies$states.se[state,]
-    plot(steelhead$Year,mn,xlab="",ylab=ylabs[state],bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)))
+    plot(steelhead$Year,mn,xlab="",ylab=ylabs[state],bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1.5)
+    if(i==1){
+      title(titles[j])
+    }
+    
     lines(steelhead$Year, rep(0,Nyears), lty="dashed")
     lines(steelhead$Year, mn, col=colr[i], lwd=3)
     lines(steelhead$Year, mn+2*se, col=colr[i])
@@ -565,7 +571,7 @@ for(j in 1:Nspecies)
     state <- state+1
   }
   mn <- pmax(0,-log(keoghDLMspecies$states[j*m-1,])/keoghDLMspecies$states[j*m,])
-  plot(steelhead$Year,mn,xlab="",ylab=ylabs[3],bty="n",xaxt="n",type="n",cex.lab=2)
+  plot(steelhead$Year,mn,xlab="",ylab=expression(~K[t]),bty="n",xaxt="n",type="n",cex.lab=2)
   lines(steelhead$Year, rep(0,Nyears), lty="dashed")
   lines(steelhead$Year, mn, col=colr[3], lwd=3)
   axis(1,at=seq(min(steelhead$Year),max(steelhead$Year),5),cex=2)
