@@ -14,6 +14,8 @@ dv_lag <- 2 # freshwater residence: Armstrong 1970 FRBC and Dolloff & Reeves 199
 ch_lag <- 4 # fixed 4 year life cycle for chum: Neave et al. 1952
 pink_lag <- 2 # fixed 2 year life cycle
 
+environ <- readRDS("environ_covars.rds")
+
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 #keogh <- read.csv("Data/Keogh_Database_Final_19nov18.csv",stringsAsFactors = F,header=T)
 keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
@@ -476,6 +478,13 @@ colnames(ch_SR) <- c("Year","ch_Adults","ch_Recruits")
 
 keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merge(dv_SR,ch_SR,by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),by="Year",all=T),0)
 
+colnames(environ)[colnames(environ)=="year"] <- "Year"
+keogh_SR <- merge(keogh_StockRec,environ,by="Year")
+layout(1)
+plot(keogh_SR$max_temp,keogh_SR$sh_Smolts)
+plot(keogh_SR$total,keogh_SR$sh_Smolts)
+
+saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
 write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
 
 refYear <- 1991
