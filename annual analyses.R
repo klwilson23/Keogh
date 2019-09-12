@@ -10,7 +10,7 @@ data_check <- "new"
 co_lag <- 1 # fixed freshwater residency for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek
 ct_lag <- 2 # fixed freshwater residency for cutthroat: 2-4 Armstrong 1971 TAFS, Trotter 1989 suggests age 2 for estuarine/coastal:  Losee et al. (2018) suggests age 2 for coastal cutties
 # Smith 1980 BC FLNRO suggests age 3 for Keogh River
-dv_lag <- 2 # freshwater residence: Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
+dv_lag <- 4 # freshwater residence: Armstrong 1970 FRBC and Dolloff & Reeves 1990 CJFAS suggest ~ age 1-4 for dolly varden smoltification
 ch_lag <- 4 # fixed 4 year life cycle for chum: Neave et al. 1952
 pink_lag <- 2 # fixed 2 year life cycle
 
