@@ -51,22 +51,25 @@ environ_covars <- merge(environment,climate,by="year")
 environ_covars <- merge(environment[,!colnames(environment)%in%c("precip_1","precip_2","precip_3","precip_4","temp_2","temp_3","temp_4")],climate,by="year")
 
 lag <- 1
-environ_covars$temp_1 <- c(rep(NA,lag),environ_covars$mean_temp[-nrow(environ_covars)])
-environ_covars$precip_1 <- c(rep(NA,lag),environ_covars$total_rain[-nrow(environ_covars)])
-environ_covars$win_precip_1 <- c(rep(NA,lag),environ_covars$win_rain[-nrow(environ_covars)])
+environ_covars$temp_1 <- c(environ_covars$mean_temp[-(1:lag)],rep(NA,lag))
+environ_covars$win_temp_1 <- c(environ_covars$win_mean_temp[-(1:lag)],rep(NA,lag))
+environ_covars$precip_1 <- c(environ_covars$mean_temp[-(1:lag)],rep(NA,lag))
+environ_covars$win_precip_1 <- c(environ_covars$mean_temp[-(1:lag)],rep(NA,lag))
 environ_covars$rain_range_1 <- environ_covars$precip_1/environ_covars$win_precip_1
 
 
 lag <- 2
-environ_covars$temp_2 <- c(rep(NA,lag),running_mean(environ_covars$mean_temp,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
-environ_covars$precip_2 <- c(rep(NA,lag),running_mean(environ_covars$total_rain,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
-environ_covars$win_precip_2 <- c(rep(NA,lag),running_mean(environ_covars$win_rain,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
+environ_covars$temp_2 <- c(running_mean(environ_covars$mean_temp,lag)[-1],rep(NA,lag))
+environ_covars$win_temp_2 <- c(running_mean(environ_covars$win_mean_temp,lag)[-1],rep(NA,lag))
+environ_covars$precip_2 <- c(running_mean(environ_covars$total_rain,lag)[-1],rep(NA,lag))
+environ_covars$win_precip_2 <- c(running_mean(environ_covars$win_rain,lag)[-1],rep(NA,lag))
 environ_covars$rain_range_2 <- environ_covars$precip_2/environ_covars$win_precip_2
 
 lag <- 3
-environ_covars$temp_3 <- c(rep(NA,lag),running_mean(environ_covars$mean_temp,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
-environ_covars$precip_3 <- c(rep(NA,lag),running_mean(environ_covars$total_rain,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
-environ_covars$win_precip_3 <- c(rep(NA,lag),running_mean(environ_covars$win_rain,lag)[-((nrow(environ_covars)-(lag-1)):nrow(environ_covars))])
+environ_covars$temp_3 <- c(running_mean(environ_covars$mean_temp,lag)[-1],rep(NA,lag))
+environ_covars$win_temp_3 <- c(running_mean(environ_covars$win_mean_temp,lag)[-1],rep(NA,lag))
+environ_covars$precip_3 <- c(running_mean(environ_covars$total_rain,lag)[-1],rep(NA,lag))
+environ_covars$win_precip_3 <- c(running_mean(environ_covars$win_rain,lag)[-1],rep(NA,lag))
 environ_covars$rain_range_3 <- environ_covars$precip_3/environ_covars$win_precip_3
 
 plot(rain_range_2~year,data=environ_covars,type="l")
@@ -75,7 +78,7 @@ plot(win_precip_3~year,data=environ_covars,type="l")
 plot(rain_range~year,data=environ_covars,type="l")
 
 bakun <- read.csv("Data/Bakun Index.csv",header=TRUE)
-bakun_Spr <- do.call(data.frame,aggregate(Bakun_Index_.51N_131W~Year,data=bakun[bakun$Month%in%c(1,2,3,4),],FUN=mean))
+bakun_Spr <- do.call(data.frame,aggregate(Bakun_Index_.51N_131W~Year,data=bakun,FUN=mean))
 colnames(bakun_Spr) <- c("year","bakun")
 environ_covars <- merge(environ_covars,bakun_Spr,by="year",all=TRUE)
 head(environ_covars)

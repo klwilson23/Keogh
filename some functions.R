@@ -1,3 +1,5 @@
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+
 ## put histograms on the diagonal
 panel.hist <- function(x, ...)
 {
