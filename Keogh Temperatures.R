@@ -1,6 +1,7 @@
 #install.packages("weathercan")
 library(weathercan)
 library(igraph)
+library(reshape2)
 vignette(package = "weathercan")
 vignette("weathercan", package = "weathercan")
 vignette("glossary", package = "weathercan")
@@ -43,9 +44,13 @@ climate <- merge(climate,win_heating,by="year")
 climate$year <- as.numeric(as.character(climate$year))
 climate <- subset(climate,climate$year!=2019)
 
-climate$rain_range <- climate$total_rain/climate$win_rain
-
 environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
+
+example <- reshape(keogh,direction = "long",varying = list(c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","ch_Adults","co_Adults"),c("sh_Smolts","dv_Smolts","ct_Smolts","pk_Recruits","ch_Recruits","co_Smolts")),v.names=c("Stock","Recruits"),idvar="Species")
+
+example$Species <- rep(c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"),each=nrow(keogh))
+example$Species <- factor(example$Species,levels=c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"))
+
 
 environ_covars <- merge(environment,climate,by="year")
 environ_covars <- merge(environment[,!colnames(environment)%in%c("precip_1","precip_2","precip_3","precip_4","temp_2","temp_3","temp_4")],climate,by="year")

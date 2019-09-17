@@ -481,8 +481,13 @@ keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merg
 colnames(environ)[colnames(environ)=="year"] <- "Year"
 keogh_SR <- merge(keogh_StockRec,environ,by="Year")
 layout(1)
-plot(keogh_SR$max_temp,keogh_SR$sh_Smolts)
-plot(keogh_SR$total,keogh_SR$sh_Smolts)
+
+example <- reshape(keogh_SR,direction = "long",varying = list(c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","ch_Adults","co_Adults"),c("sh_Smolts","dv_Smolts","ct_Smolts","pk_Recruits","ch_Recruits","co_Smolts")),v.names=c("Stock","Recruits"),idvar="Species")
+
+example$Species <- rep(c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"),each=nrow(keogh_SR))
+example$Species <- factor(example$Species,levels=c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"))
+
+keogh_long <- example
 
 saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
 write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
