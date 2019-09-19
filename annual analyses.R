@@ -1,10 +1,5 @@
 library(reshape2)
-
-Corner_text <- function(text, location="topright",...)
-{
-  legend(location,legend=text, bty ="n", pch=NA,...)
-}
-
+source("some functions.R")
 data_check <- "new"
 
 co_lag <- 1 # fixed freshwater residency for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek

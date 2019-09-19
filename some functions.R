@@ -65,3 +65,8 @@ getDFAfits <- function(MLEobj, alpha=0.05, covariates=NULL) {
   fits$lo <- qnorm(alpha/2)*SE + fits$ex
   return(fits)
 }
+
+Corner_text <- function(text, location="topright",...)
+{
+  legend(location,legend=text, bty ="n", pch=NA,...)
+}
