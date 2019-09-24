@@ -13,7 +13,7 @@ stations_search(coords=c(50.67,-127.3),dist=50,interval="day")
 small_data <- weather_dl(station_ids = c(201,202, 51319), start = "1975-01-01", end = "1976-01-01",interval = "day")
 
 months <- c(paste(0,1:9,sep=""),10:12)
-summer_months <- months[4:10]
+summer_months <- months[5:8]
 winter_months <- months[-(3:10)]
 portHardy_pg <- weather_dl(station_ids = c(202, 51319), start = "1950-01-01", end = "2019-01-01",interval = "day")
 

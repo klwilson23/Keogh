@@ -5,21 +5,48 @@ library(ggpubr)
 library(ggplot2)
 library(MARSS)
 library(broom)
-keogh <- readRDS("Keogh_stockRec_enviro.rds")
+keogh <- readRDS("Keogh_SR_enviro_long.rds")
+keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
+keogh_long <- subset(keogh_long,Species!="Chum")
 
-example <- reshape(keogh,direction = "long",varying = list(c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","ch_Adults","co_Adults"),c("sh_Smolts","dv_Smolts","ct_Smolts","pk_Recruits","ch_Recruits","co_Smolts")),v.names=c("Stock","Recruits"),idvar="Species")
+keogh <- subset(keogh_long,select = c(Year,Species,Stock,Recruits,juvCohort))
+keogh <- reshape(keogh,direction = "wide",idvar="Year",timevar="Species")
 
-example$Species <- rep(c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"),each=nrow(keogh))
-example$Species <- factor(example$Species,levels=c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho"))
+environment <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink,seals,npgo,mei,oceanSalmon))
+enviro <- reshape(environment,direction = "wide",idvar="Year",timevar="Species")
 
-keogh_long <- example
-keogh_long <- subset(keogh_long,keogh_long$Year<=2015 & keogh_long$Year>=1975)
-keogh_long <- subset(keogh_long,keogh_long$Species!="Chum")
-keogh <- subset(keogh,keogh$Year >= 1976 & keogh$Year <= 2014)
-environment <- keogh[,-match(c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","ch_Adults","co_Adults","sh_Smolts","dv_Smolts","ct_Smolts","pk_Recruits","ch_Recruits","co_Smolts"),colnames(keogh))]
-sdCovars <- attr(scale(environment,center=TRUE,scale=TRUE),"scaled:scale")
-covarScale <- scale(environment,center=TRUE,scale=TRUE)
-covarScale[is.na(covarScale)] <- 0
+sdCovars <- attr(scale(enviro[,-1],center=TRUE,scale=TRUE),"scaled:scale")
+covarScale <- scale(enviro[,-1],center=TRUE,scale=TRUE)
+#covarScale[is.na(covarScale)] <- 0
+
+# get estimates of missing data from DLM analysis
+Nyears <- length(enviro$Year)
+years <- enviro$Year
+covars <- t(as.matrix(covarScale))
+colnames(covars) <- enviro$Year
+ns <- nrow(covars)
+B <- "zero"
+Q <- "unconstrained"
+R <- diag(0.01, ns)
+U <- "zero"
+A <- "unequal"
+x0 <- "zero"
+m <- apply(covars, 1, mean, na.rm = TRUE)
+mod.list.corr = list(B = B, Q = Q, R = R, U = U, x0 = x0, A = A, tinitx = 0)
+fit.corr <- MARSS(covars, model = mod.list.corr, control = list(maxit = 5000), inits = list(A = matrix(m, ns, 1)))
+
+d <- augment(fit.corr, interval = "confidence")
+d$Year <- d$t + (min(years)-1)
+d$covars <- d$.rownames
+
+covarFits <- matrix(sapply(1:nrow(d),function(x){d$.fitted[x]*sdCovars[names(sdCovars)%in%d$covars[x]]}),nrow=ncol(covarScale),ncol=nrow(covarScale),byrow=FALSE)
+
+sh_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$sh_Adults),adultFits[,1],keogh$sh_Adults))
+ct_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$ct_Adults),adultFits[,3],keogh$ct_Adults))
+dv_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$dv_Adults),adultFits[,2],keogh$dv_Adults))
+co_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$co_Adults),adultFits[,5],keogh$co_Adults))
+pk_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$pk_Adults),adultFits[,4],keogh$pk_Adults))
+
 
 # get estimates of adult densities from DFA analysis:
 # run a DFA on the standardized adult data
@@ -53,8 +80,7 @@ Z[1:(ns * nTrends)] <- sapply(1:nTrends,function(x){paste0("z",x,1:ns)})
 Z[upper.tri(Z)] <- 0
 A <- "unequal"
 #A <- "zero"
-mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, 
-                    x0 = x0)
+mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
 
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
 fit <- MARSS(adultDat, model=mod.list, control=list(minit=200,maxit=50000+200), inits=list(A=matrix(m,ns,1)))
