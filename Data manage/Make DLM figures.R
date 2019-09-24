@@ -70,8 +70,8 @@ for(i in 1:length(species))
   plot(keogh_long$Stock[keogh_long$Species==species[i]],keogh_long$Recruits[keogh_long$Species==species[i]],pch=21,bg=colr[i],xlab=paste(species[i],"adults",sep=" "),ylab=paste(species[i],"recruits",sep=" "),ylim=range(c(0,keogh_long$Recruits[keogh_long$Species==species[i]]),na.rm=TRUE),xlim=c(0,max(keogh_long$Stock[keogh_long$Species==species[i]],na.rm=TRUE)))
   for(t in 1:Nyears)
   {
-    alphas <- exp(keoghDLM$states[(1:10)%%2==1,t][i]) + sum(coef(keoghDLM)$D[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$D))])
-    betas <- keoghDLM$states[(1:10)%%2==0,t][i] + sum(coef(keoghDLM)$C[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$C))])
+    alphas <- exp(keoghDLM$states[(1:10)%%2==1,t][i])# + sum(coef(keoghDLM)$D[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$D))])
+    betas <- keoghDLM$states[(1:10)%%2==0,t][i]# + sum(coef(keoghDLM)$C[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$C))])
     curve(alphas*x*exp(betas*x),add=TRUE,xlab=paste(species[i],"adults",sep=" "),ylab=paste(species[i],"recruits",sep=" "),ylim=range(c(0,keogh_long$Recruits[keogh_long$Species==species[i]]),na.rm=TRUE),col=adjustcolor(colr[i],alpha=0.5))
   }
 }
