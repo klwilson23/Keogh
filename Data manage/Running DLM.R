@@ -63,21 +63,30 @@ D[grep("Cutthroat",coefNames),3] <- coefNames[grep("Cutthroat",coefNames)]
 D[grep("Pink_",coefNames),4] <- coefNames[grep("Pink_",coefNames)]
 D[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
 
+
+d2 <- rbind(t(freshCovarScale),t(oceanCovarScale))
+D2 <- matrix(list(0),nrow=nrow(d2),ncol=Nspecies)
+coefNames <- paste("b",matrix(unlist(strsplit(row.names(d2),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(d),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
+D2[grep("Steelhead",coefNames),1] <- coefNames[grep("Steelhead",coefNames)]
+D2[grep("Dolly Varden",coefNames),2] <- coefNames[grep("Dolly Varden",coefNames)]
+D2[grep("Cutthroat",coefNames),3] <- coefNames[grep("Cutthroat",coefNames)]
+D2[grep("Pink_",coefNames),4] <- coefNames[grep("Pink_",coefNames)]
+D2[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
 # NPGO, seals, pacific salmon, and mei affects observation model
 c <- rbind(t(oceanCovarScale))
 C <- matrix(list(0),nrow=m*Nspecies,ncol=nrow(c))
 alphaCoefNames <- paste("a",matrix(unlist(strsplit(row.names(c),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(c),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
 betaCoefNames <- paste("b",matrix(unlist(strsplit(row.names(c),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(c),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
-C[1:2,grep("Steelhead",adultCoefNames)] <- rbind(alphaCoefNames[grep("Steelhead",adultCoefNames)],
-                                                 betaCoefNames[grep("Steelhead",adultCoefNames)])
-C[3:4,grep("Dolly Varden",adultCoefNames)] <- rbind(alphaCoefNames[grep("Dolly Varden",adultCoefNames)],
-                                                  betaCoefNames[grep("Dolly Varden",adultCoefNames)])
-C[5:6,grep("Cutthroat",adultCoefNames)] <- rbind(alphaCoefNames[grep("Cutthroat",adultCoefNames)],
-                                               betaCoefNames[grep("Cutthroat",adultCoefNames)])
-C[7:8,grep("Pink_",adultCoefNames)] <- rbind(alphaCoefNames[grep("Pink_",adultCoefNames)],
-                                           betaCoefNames[grep("Pink_",adultCoefNames)])
-C[9:10,grep("Coho_",adultCoefNames)] <- rbind(alphaCoefNames[grep("Coho_",adultCoefNames)],
-                                           betaCoefNames[grep("Coho_",adultCoefNames)])
+C[1:2,grep("Steelhead",alphaCoefNames)] <- rbind(alphaCoefNames[grep("Steelhead",alphaCoefNames)],
+                                                 betaCoefNames[grep("Steelhead",betaCoefNames)])
+C[3:4,grep("Dolly Varden",alphaCoefNames)] <- rbind(alphaCoefNames[grep("Dolly Varden",alphaCoefNames)],
+                                                  betaCoefNames[grep("Dolly Varden",betaCoefNames)])
+C[5:6,grep("Cutthroat",alphaCoefNames)] <- rbind(alphaCoefNames[grep("Cutthroat",alphaCoefNames)],
+                                               betaCoefNames[grep("Cutthroat",betaCoefNames)])
+C[7:8,grep("Pink_",alphaCoefNames)] <- rbind(alphaCoefNames[grep("Pink_",alphaCoefNames)],
+                                           betaCoefNames[grep("Pink_",betaCoefNames)])
+C[9:10,grep("Coho_",alphaCoefNames)] <- rbind(alphaCoefNames[grep("Coho_",alphaCoefNames)],
+                                           betaCoefNames[grep("Coho_",betaCoefNames)])
 
 c <- rbind(t(oceanCovarScale))
 C2 <- matrix(list(0),nrow=m*Nspecies,ncol=nrow(c))
@@ -157,6 +166,8 @@ R <- "unconstrained"
 x0 <- "zero"
 initx <- 0
 model.listDLMspecies <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,d=d,D=D,C=C2,c=c,x0=x0,tinitx=initx)
+model.listDLMv2 <- list(B=B,U=U,Q="diagonal and unequal",Z=Z,A=A,R=R,d=d2,D=D2,C="zero",x0=x0,tinitx=initx)
+
 ln_RS_sh <- log(recruits$Recruits.Steelhead/adults$Stock.Steelhead)
 ln_RS_dv <- log(recruits$`Recruits.Dolly Varden`/adults$`Stock.Dolly Varden`)
 ln_RS_ct <- log(recruits$Recruits.Cutthroat/adults$Stock.Cutthroat)
@@ -165,7 +176,7 @@ ln_RS_co <- log(recruits$Recruits.Coho/adults$Stock.Coho)
 dat <- rbind(ln_RS_sh,ln_RS_dv,ln_RS_ct,ln_RS_pk,ln_RS_co)
 a <- apply(dat,1,mean,na.rm=TRUE)
 inits.list <- list(x0=array(matrix(rep(0,m), nrow=m),c(m,m,Nspecies)),A=matrix(a,Nspecies,1))
-keoghDLMspecies <- MARSS(dat, model=model.listDLMspecies,control=list(maxit=250000,conv.test.slope.tol=0.5),inits=inits.list)
+keoghDLMspecies <- MARSS(dat, model=model.listDLMv2,control=list(maxit=250000,conv.test.slope.tol=0.5),inits=inits.list)
 saveRDS(keoghDLMspecies,"Results/keoghDLM.rds")
 
 keoghAllfit <- augment(keoghDLMspecies, interval="confidence")

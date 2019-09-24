@@ -33,6 +33,79 @@ sdCovarsOcean <- attr(scale(ocean_enviro[,-1],center=TRUE,scale=TRUE),"scaled:sc
 mnCovarsOcean <- attr(scale(ocean_enviro[,-1],center=TRUE,scale=TRUE),"scaled:center")
 oceanCovarScale <- scale(ocean_enviro[,-1],center=TRUE,scale=TRUE)
 
+# make plot of environment
+margins <- c(0.5,0.5,0.5,1.1)
+p1 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=seals,colour=Species)) +
+  geom_point(data=keogh_long, mapping = aes(x=Year, y=seals,colour=Species)) +
+  xlab("Year") + ylab("Seal densities") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+p2 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=oceanSalmon,colour=Species)) +
+  geom_point(data=keogh_long, mapping = aes(x=Year, y=oceanSalmon,colour=Species)) +
+  xlab("Year") + ylab("North Pacific salmon biomass") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+p3 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=sumTemp,colour=Species)) +
+  geom_point(data=keogh_long, mapping = aes(x=Year, y=sumTemp,colour=Species)) +
+  xlab("Year") + ylab("Summer air temperature") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+megaP <- ggarrange(p1,p2,p3,ncol=1,nrow=3,legend="top",common.legend=TRUE)
+pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Trends in freshwater and marine conditions for Pacific salmon in the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
+
+ggsave("Figures/Seal and salmon rebuild.jpeg",plot=pAnnotated,units="in",height=7,width=6,dpi=800)
+
+jpeg("Figures/Seal and salmon rebuild v2.jpeg",width=6,height=7,units="in",res=800)
+layout(matrix(1:3,nrow=3))
+par(mar=c(5,4,1,1))
+plot(seals~Year,data=keogh_long,ylab="Seal densities (per km)",pch=21,bg=colr[Species],xpd=NA)
+abline(v=1991,lwd=3)
+plot(oceanSalmon~Year,data=keogh_long,ylab="North Pacific salmon biomass (metric tonnes)",pch=21,bg=colr[Species],xpd=NA)
+abline(v=1991,lwd=3)
+plot(sumTemp~Year,data=keogh_long,ylab="Summer air temperatures",pch=21,bg=colr[Species],xpd=NA)
+abline(v=1991,lwd=3)
+dev.off()
+
+# make Ricker plot
+jpeg("Figures/Ricker model 1.jpeg",width=5,height=6,units="in",res=800)
+layout(matrix(1:2,nrow=2))
+par(mar=c(5,4,1,1))
+alpha <- 2
+beta <- -0.02
+curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
+curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
+dev.off()
+
+jpeg("Figures/Ricker model 2.jpeg",width=5,height=6,units="in",res=800)
+layout(matrix(1:2,nrow=2))
+par(mar=c(5,4,1,1))
+alpha <- 2
+beta <- -0.02
+curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
+curve(alpha*x*exp(2*beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
+curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
+curve(log(alpha)+2*beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
+dev.off()
+
+jpeg("Figures/Ricker model 3.jpeg",width=5,height=6,units="in",res=800)
+layout(matrix(1:2,nrow=2))
+par(mar=c(5,4,1,1))
+alpha <- 2
+beta <- -0.02
+curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
+curve(alpha*x*exp(2*beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
+curve(0.5*alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[3],add=TRUE)
+curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
+curve(log(alpha)+2*beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
+curve(log(0.5*alpha)+beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[3],add=TRUE)
+dev.off()
+
 # multiple species: dolly varden, cutthroat trout, pink salmon, coho salmon
 # including process and observation error
 # precipitation covariates only affect observation model
