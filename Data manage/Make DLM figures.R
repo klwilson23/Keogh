@@ -12,11 +12,15 @@ wesAnderson <- "Darjeeling1"
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
-
+Nspecies <- length(unique(keogh_long$Species))
 adults <- subset(keogh_long,select = c(Year,Species,Stock))
 adults <- reshape(adults,direction = "wide",idvar="Year",timevar="Species")
 recruits <- subset(keogh_long,select = c(Year,Species,Recruits))
 recruits <- reshape(recruits,direction = "wide",idvar="Year",timevar="Species")
+
+years <- recruits$Year
+Nyears <- nrow(recruits)
+colr <- wes_palette(wesAnderson,Nspecies,type=c("discrete"))
 
 juv_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink))
 fresh_enviro <- reshape(juv_enviro,direction = "wide",idvar="Year",timevar="Species")
@@ -37,73 +41,128 @@ oceanCovarScale <- scale(ocean_enviro[,-1],center=TRUE,scale=TRUE)
 margins <- c(0.5,0.5,0.5,1.1)
 p1 <- ggplot(data = keogh_long) + 
   geom_line(aes(x=Year, y=seals,colour=Species)) +
-  geom_point(data=keogh_long, mapping = aes(x=Year, y=seals,colour=Species)) +
+  geom_smooth(data=keogh_long,aes(x=Year, y=seals))+
   xlab("Year") + ylab("Seal densities") +
   scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
   theme_minimal() +
   theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
 p2 <- ggplot(data = keogh_long) + 
   geom_line(aes(x=Year, y=oceanSalmon,colour=Species)) +
-  geom_point(data=keogh_long, mapping = aes(x=Year, y=oceanSalmon,colour=Species)) +
-  xlab("Year") + ylab("North Pacific salmon biomass") +
+  geom_smooth(data=keogh_long,aes(x=Year, y=oceanSalmon))+
+  xlab("Year") + ylab("North Pacific salmon (mt)") +
   scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
   theme_minimal() +
   theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
 p3 <- ggplot(data = keogh_long) + 
-  geom_line(aes(x=Year, y=sumTemp,colour=Species)) +
-  geom_point(data=keogh_long, mapping = aes(x=Year, y=sumTemp,colour=Species)) +
-  xlab("Year") + ylab("Summer air temperature") +
+  geom_line(aes(x=Year, y=npgo,colour=Species)) +
+  geom_smooth(data=keogh_long,aes(x=Year, y=npgo))+
+  xlab("Year") + ylab("North Pacific gyre oscillation") +
   scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
   theme_minimal() +
   theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
 megaP <- ggarrange(p1,p2,p3,ncol=1,nrow=3,legend="top",common.legend=TRUE)
-pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Trends in freshwater and marine conditions for Pacific salmon in the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
+pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Trends in marine and coastal conditions for Pacific salmonids in the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
 
 ggsave("Figures/Seal and salmon rebuild.jpeg",plot=pAnnotated,units="in",height=7,width=6,dpi=800)
 
-jpeg("Figures/Seal and salmon rebuild v2.jpeg",width=6,height=7,units="in",res=800)
-layout(matrix(1:3,nrow=3))
-par(mar=c(5,4,1,1))
-plot(seals~Year,data=keogh_long,ylab="Seal densities (per km)",pch=21,bg=colr[Species],xpd=NA)
-abline(v=1991,lwd=3)
-plot(oceanSalmon~Year,data=keogh_long,ylab="North Pacific salmon biomass (metric tonnes)",pch=21,bg=colr[Species],xpd=NA)
-abline(v=1991,lwd=3)
-plot(sumTemp~Year,data=keogh_long,ylab="Summer air temperatures",pch=21,bg=colr[Species],xpd=NA)
-abline(v=1991,lwd=3)
-dev.off()
+# make plot of environment
+margins <- c(0.5,0.5,0.5,1.1)
+p1 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=sumTemp,colour=Species)) +
+  geom_smooth(data=keogh_long,aes(x=Year, y=sumTemp))+
+  xlab("Year") + ylab("Summer air temperatures") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+p2 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=winRain,colour=Species)) +
+  geom_smooth(data=keogh_long,aes(x=Year, y=winRain))+
+  xlab("Year") + ylab("Winter rainfall (mm)") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+p3 <- ggplot(data = keogh_long) + 
+  geom_line(aes(x=Year, y=freshCoho,colour=Species)) +
+  geom_smooth(data=keogh_long,aes(x=Year, y=freshCoho))+
+  xlab("Year") + ylab("Competing Coho salmon") +
+  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  theme_minimal() +
+  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+megaP <- ggarrange(p1,p2,p3,ncol=1,nrow=3,legend="top",common.legend=TRUE)
+pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Trends in freshwater conditions for Pacific salmonids in the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
+
+ggsave("Figures/freshwater trends.jpeg",plot=pAnnotated,units="in",height=7,width=6,dpi=800)
+
 
 # make Ricker plot
 jpeg("Figures/Ricker model 1.jpeg",width=5,height=6,units="in",res=800)
 layout(matrix(1:2,nrow=2))
 par(mar=c(5,4,1,1))
-alpha <- 2
-beta <- -0.02
-curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
-curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
+alpha <- 4
+beta <- -0.002
+Smax <- 1/-beta
+Rmax <- alpha*Smax*exp(beta*Smax)
+K <- -log(alpha)/beta
+curve(alpha*x*exp(beta*x),from=0,to=2*Smax,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,Rmax))
+points(Smax,Rmax,pch=21,bg=colr[1])
+curve(log(alpha)+beta*x,from=0,to=2*Smax,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=range(log(alpha)+beta*2*Smax,log(alpha)+beta*1e-3))
 dev.off()
 
 jpeg("Figures/Ricker model 2.jpeg",width=5,height=6,units="in",res=800)
 layout(matrix(1:2,nrow=2))
 par(mar=c(5,4,1,1))
-alpha <- 2
-beta <- -0.02
-curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
-curve(alpha*x*exp(2*beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
-curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
-curve(log(alpha)+2*beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
+alpha <- 4
+beta <- -0.002
+Smax <- 1/-beta
+Rmax <- alpha*Smax*exp(beta*Smax)
+K <- -log(alpha)/beta
+
+alpha2 <- 4*0.5
+beta2 <- -0.002
+Smax2 <- 1/-beta2
+Rmax2 <- alpha2*Smax2*exp(beta2*Smax2)
+K2 <- -log(alpha2)/beta2
+
+curve(alpha*x*exp(beta*x),from=0,to=2*Smax,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,Rmax))
+curve(alpha2*x*exp(beta2*x),from=0,to=2*Smax,lwd=2,col=colr[2],ylim=c(0,Rmax2),add=TRUE)
+points(Smax,Rmax,pch=21,bg=colr[1])
+points(Smax2,Rmax2,pch=21,bg=colr[2])
+curve(log(alpha)+beta*x,from=0,to=2*Smax,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=range(log(alpha)+beta*2*Smax,log(alpha)+beta*1e-3))
+curve(log(alpha2)+beta2*x,from=0,to=2*Smax,lwd=2,col=colr[2],ylim=range(log(alpha2)+beta2*2*Smax2,log(alpha2)+beta2*1e-3),add=TRUE)
+
 dev.off()
 
 jpeg("Figures/Ricker model 3.jpeg",width=5,height=6,units="in",res=800)
 layout(matrix(1:2,nrow=2))
 par(mar=c(5,4,1,1))
-alpha <- 2
-beta <- -0.02
-curve(alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,1/-beta))
-curve(alpha*x*exp(2*beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
-curve(0.5*alpha*x*exp(beta*x),from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[3],add=TRUE)
-curve(log(alpha)+beta*x,from=0,to=3*-log(alpha)/beta,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=c(-1.5,1))
-curve(log(alpha)+2*beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[2],add=TRUE)
-curve(log(0.5*alpha)+beta*x,from=0,to=3*-log(alpha)/beta,lwd=2,col=colr[3],add=TRUE)
+alpha <- 4
+beta <- -0.002
+Smax <- 1/-beta
+Rmax <- alpha*Smax*exp(beta*Smax)
+K <- -log(alpha)/beta
+
+alpha2 <- 4*0.5
+beta2 <- -0.002
+Smax2 <- 1/-beta2
+Rmax2 <- alpha2*Smax2*exp(beta2*Smax2)
+K2 <- -log(alpha2)/beta2
+
+alpha3 <- 4
+beta3 <- -0.002*2
+Smax3 <- 1/-beta3
+Rmax3 <- alpha3*Smax3*exp(beta3*Smax3)
+K3 <- -log(alpha3)/beta3
+
+curve(alpha*x*exp(beta*x),from=0,to=2*Smax,xlab="Spawner abundance",ylab="Recruits",lwd=2,col=colr[1],ylim=c(0,Rmax))
+curve(alpha2*x*exp(beta2*x),from=0,to=2*Smax,lwd=2,col=colr[2],ylim=c(0,Rmax2),add=TRUE)
+curve(alpha3*x*exp(beta3*x),from=0,to=2*Smax,lwd=2,col=colr[3],ylim=c(0,Rmax2),add=TRUE)
+points(Smax,Rmax,pch=21,bg=colr[1])
+points(Smax2,Rmax2,pch=21,bg=colr[2])
+points(Smax3,Rmax3,pch=21,bg=colr[3])
+
+curve(log(alpha)+beta*x,from=0,to=2*Smax,xlab="Spawner abundance",ylab="log(Recruits/Spawner)",lwd=2,col=colr[1],ylim=range(log(alpha)+beta*2*Smax,log(alpha)+beta*1e-3))
+curve(log(alpha2)+beta2*x,from=0,to=2*Smax,lwd=2,col=colr[2],add=TRUE)
+curve(log(alpha3)+beta3*x,from=0,to=2*Smax,lwd=2,col=colr[3],add=TRUE)
 dev.off()
 
 # multiple species: dolly varden, cutthroat trout, pink salmon, coho salmon
@@ -111,11 +170,6 @@ dev.off()
 # precipitation covariates only affect observation model
 # time-varying beta & alpha
 # run a DLM on stock-recruitment for steelhead only
-
-years <- recruits$Year
-Nyears <- nrow(recruits)
-Nspecies <- 5
-colr <- wes_palette(wesAnderson,Nspecies,type=c("discrete"))
 
 ln_RS_sh <- log(recruits$Recruits.Steelhead/adults$Stock.Steelhead)
 ln_RS_dv <- log(recruits$`Recruits.Dolly Varden`/adults$`Stock.Dolly Varden`)
@@ -152,7 +206,8 @@ dev.off()
 
 MARSSparamCIs(keoghDLM)
 keoghDLM$coef
-
+keoghDLM$model
+summary(keoghDLM)
 keoghAllfit <- augment(keoghDLM, interval="confidence")
 keoghAllfit$Year <- keoghAllfit$t + 1975
 keoghAllfit$Species <- keoghAllfit$.rownames
@@ -185,7 +240,7 @@ for(j in 1:Nspecies)
   mn <- keoghDLM$states[state,]
   se <- keoghDLM$states.se[state,]
   par(mar=c(0,5,7,1))
-  plot(years,mn,xlab="",ylab=ylabs[state],bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1.5)
+  plot(years,mn,xlab="",ylab="Productivity",bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1)
   title(titles[j])
   abline(v=1991,lwd=3)
   
@@ -197,7 +252,7 @@ for(j in 1:Nspecies)
   par(mar=c(3.5,5,3.5,1))
   mn <- keoghDLM$states[state+1,]
   se <- keoghDLM$states.se[state+1,]
-  plot(years,mn,xlab="",ylab=ylabs[state+1],bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1.5)
+  plot(years,mn,xlab="",ylab="Density-dependence",bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1)
 
   lines(years, rep(0,Nyears), lty="dashed")
   lines(years, mn, col=colr[j], lwd=3)
@@ -208,7 +263,7 @@ for(j in 1:Nspecies)
   # temporal trends in carrying capacity
   par(mar=c(7,5,0,1))
   mn <- ifelse(-log(exp(keoghDLM$states[state,]))/keoghDLM$states[state+1,]<0,NA,-log(exp(keoghDLM$states[state,]))/keoghDLM$states[state+1,])
-  plot(years,mn,xlab="",ylab=expression(~K[t]),bty="n",xaxt="n",type="n",cex.lab=2)
+  plot(years,mn,xlab="",ylab="Freshwater capacity",bty="n",xaxt="n",type="n",cex.lab=1)
   lines(years, rep(0,Nyears), lty="dashed")
   lines(years, mn, col=colr[j], lwd=3)
   axis(1,at=seq(min(years),max(years),5),cex=2)
