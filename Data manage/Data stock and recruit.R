@@ -25,6 +25,12 @@ ch_lag <- 4 # fixed 4 year life cycle for chum: Neave et al. 1952
 pink_lag <- 2 # fixed 2 year life cycle
 
 environ <- readRDS("environ_covars.rds")
+environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
+environ$seal_abundance[environ$year>=2014 & is.na(environ$seal_abundance)] <- environ$seal_abundance[environ$year==2014]
+environ$seal_density[environ$year>=2014 & is.na(environ$seal_density)] <- environ$seal_density[environ$year==2014]
+environ$total[environ$year>=2015 & is.na(environ$total)] <- environ$total[environ$year==2015]
+#saveRDS(environ,"environ_covars.rds")
+#environ <- readRDS("environ_covars.rds")
 
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
 keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
@@ -335,7 +341,7 @@ for(i in 1:nrow(keogh_long))
     freshCutt[i] <- sum(props * Cutty,na.rm=TRUE)
     freshDolly[i] <- sum(props * Dolly,na.rm=TRUE)
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     if(any(as.numeric(row.names(prop_adults_year)) %in% keogh_long$Year[i])){
@@ -407,7 +413,7 @@ for(i in 1:nrow(keogh_long))
     npgo[i] <- sum(props * npgo_lag,na.rm=TRUE)
     oceanSalmon[i] <- sum(props * oceanSalmon_lag,na.rm=TRUE)
     mei[i] <- sum(props * mei_lag,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
   }
   if(spp=="Dolly Varden"){
     
@@ -437,7 +443,7 @@ for(i in 1:nrow(keogh_long))
     freshCutt[i] <- sum(props * Cutty,na.rm=TRUE)
     freshDolly[i] <- sum(props * Dolly,na.rm=TRUE)
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - dv_smolt_lags,keogh_long$Year,nomatch=0)
@@ -480,7 +486,7 @@ for(i in 1:nrow(keogh_long))
     freshCutt[i] <- sum(props * Cutty,na.rm=TRUE)
     freshDolly[i] <- sum(props * Dolly,na.rm=TRUE)
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - ct_smolt_lags,keogh_long$Year,nomatch=0)
@@ -540,7 +546,7 @@ for(i in 1:nrow(keogh_long))
     npgo[i] <- sum(props * npgo_lag,na.rm=TRUE)
     oceanSalmon[i] <- sum(props * oceanSalmon_lag,na.rm=TRUE)
     mei[i] <- sum(props * mei_lag,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
   }
   if(spp=="Chum"){
     juvLag <- 0
@@ -584,7 +590,7 @@ for(i in 1:nrow(keogh_long))
     npgo[i] <- sum(props * npgo_lag,na.rm=TRUE)
     oceanSalmon[i] <- sum(props * oceanSalmon_lag,na.rm=TRUE)
     mei[i] <- sum(props * mei_lag,na.rm=TRUE)
-    seals[i] <- sum(props * keogh_long$seal_density[year_matches],na.rm=TRUE)
+    seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
   }
 }
 keogh_long$sumTemp <- ifelse(sumTemp==0,NA,sumTemp)
@@ -611,6 +617,22 @@ plot(Stock~npgo,data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=i
 plot(Stock~mei,data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
 plot(Stock~oceanSalmon,data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
 
+refYear <- 1991
+pre89 <- keogh_long[keogh_long$Year<refYear & keogh_long$Species=="Steelhead",]
+post89 <- keogh_long[keogh_long$Year>=refYear & keogh_long$Species=="Steelhead",]
+ricker_early <- lm(log(Recruits/Stock)~Stock,data=pre89)
+ricker_late <- lm(log(Recruits/Stock)~Stock,data=post89)
+
+jpeg("steelhead Ricker breakpoint.jpeg",width=7,height=7,units="in",res=800)
+layout(1)
+plot(log(Recruits/Stock)~Stock,data=keogh_long[keogh_long$Species=="Steelhead",],pch=21,bg=ifelse(keogh_long$Year[keogh_long$Species=="Steelhead"]<refYear,"dodgerblue","orange"))
+
+with(keogh_long[keogh_long$Species=="Steelhead",], text(log(Recruits/Stock)~Stock, labels = Year,pos=4,font=5,cex=0.75))
+
+abline(ricker_early,col="dodgerblue")
+abline(ricker_late,col="orange")
+
+dev.off()
 saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
 saveRDS(keogh_long,"Keogh_SR_enviro_long.rds")
 write.csv(keogh_long,"Keogh_StockRecruitment.csv",row.names=F)

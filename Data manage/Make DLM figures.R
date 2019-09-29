@@ -12,6 +12,8 @@ wesAnderson <- "Darjeeling1"
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
+keogh_long$oceanSalmon <- residuals(lm(oceanSalmon~seals:Species,data=keogh_long))
+keogh_long$seals <- log(keogh_long$seals)
 Nspecies <- length(unique(keogh_long$Species))
 adults <- subset(keogh_long,select = c(Year,Species,Stock))
 adults <- reshape(adults,direction = "wide",idvar="Year",timevar="Species")
@@ -185,8 +187,8 @@ rowMeans(keoghDLM$states)
 species <- unique(keogh_long$Species)
 x <- species[4]
 refYear <- 
-alphas <- exp(keoghDLM$states[(1:10)%%2==1,15]) + sapply(species,function(x){sum(coef(keoghDLM)$D[grep(paste(x,"_",sep=""),row.names(coef(keoghDLM)$D))])})
-betas <- keoghDLM$states[(1:10)%%2==0,15] + sapply(species,function(x){sum(coef(keoghDLM)$C[grep(x,row.names(coef(keoghDLM)$C))])})
+alphas <- exp(coef(keoghDLM)$D)
+betas <- keoghDLM$states + sapply(species,function(x){sum(coef(keoghDLM)$C[grep(paste(x,"_",sep=""),row.names(coef(keoghDLM)$C))])})
 names(alphas) <- names(betas) <- species
 
 jpeg("Figures/recruitment.jpeg",width=7.5,height=5,units="in",res=800)
@@ -197,17 +199,13 @@ for(i in 1:length(species))
   plot(keogh_long$Stock[keogh_long$Species==species[i]],keogh_long$Recruits[keogh_long$Species==species[i]],pch=21,bg=colr[i],xlab=paste(species[i],"adults",sep=" "),ylab=paste(species[i],"recruits",sep=" "),ylim=range(c(0,keogh_long$Recruits[keogh_long$Species==species[i]]),na.rm=TRUE),xlim=c(0,max(keogh_long$Stock[keogh_long$Species==species[i]],na.rm=TRUE)))
   for(t in 1:Nyears)
   {
-    alphas <- exp(keoghDLM$states[(1:10)%%2==1,t][i])# + sum(coef(keoghDLM)$D[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$D))])
-    betas <- keoghDLM$states[(1:10)%%2==0,t][i]# + sum(coef(keoghDLM)$C[grep(paste(species[i],"_",sep=""),row.names(coef(keoghDLM)$C))])
-    curve(alphas*x*exp(betas*x),add=TRUE,xlab=paste(species[i],"adults",sep=" "),ylab=paste(species[i],"recruits",sep=" "),ylim=range(c(0,keogh_long$Recruits[keogh_long$Species==species[i]]),na.rm=TRUE),col=adjustcolor(colr[i],alpha=0.5))
+    alpha <- alphas[i]
+    betas <- keoghDLM$states[i,t]
+    curve(alpha*x*exp(betas*x),add=TRUE,xlab=paste(species[i],"adults",sep=" "),ylab=paste(species[i],"recruits",sep=" "),ylim=range(c(0,keogh_long$Recruits[keogh_long$Species==species[i]]),na.rm=TRUE),col=adjustcolor(colr[i],alpha=0.5))
   }
 }
 dev.off()
 
-MARSSparamCIs(keoghDLM)
-keoghDLM$coef
-keoghDLM$model
-summary(keoghDLM)
 keoghAllfit <- augment(keoghDLM, interval="confidence")
 keoghAllfit$Year <- keoghAllfit$t + 1975
 keoghAllfit$Species <- keoghAllfit$.rownames
@@ -227,65 +225,47 @@ pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("MARSS model fits t
 ggsave("Model fits.jpeg",plot=pAnnotated,units="in",height=5,width=7,dpi=800)
 
 # temporal trends:
-jpeg("Figures/temporal trends.jpeg",width=10,height=6,units="in",res=800)
-m <- 2
-ylabs <- rep(c(expression(log(alpha[t])),expression(beta[t]~"adults")),Nspecies)
+jpeg("Figures/temporal trends.jpeg",width=10,height=4.5,units="in",res=800)
+m <- 1
 titles <- c("Steelhead","Dolly Varden","Cutthroat","Pink","Coho")
 layout(matrix(1:((m+1)*Nspecies),nrow=(m+1),ncol=Nspecies))
-states <- (1:(Nspecies*m))[1:(Nspecies*m) %%2==1]
+states <- 1:5
 for(j in 1:Nspecies)
 {
   state <- states[j]
-  #temporal trends in alpha
+  # temporal trends in beta
+  par(mar=c(2,5,5,1))
   mn <- keoghDLM$states[state,]
   se <- keoghDLM$states.se[state,]
-  par(mar=c(0,5,7,1))
-  plot(years,mn,xlab="",ylab="Productivity",bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1)
-  title(titles[j])
-  abline(v=1991,lwd=3)
-  
-  lines(years, rep(0,Nyears), lty="dashed")
-  lines(years, mn, col=colr[j], lwd=3)
-  lines(years, mn+2*se, col=colr[j])
-  lines(years, mn-2*se, col=colr[j])
-  # temporal trends in beta
-  par(mar=c(3.5,5,3.5,1))
-  mn <- keoghDLM$states[state+1,]
-  se <- keoghDLM$states.se[state+1,]
-  plot(years,mn,xlab="",ylab="Density-dependence",bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1)
+  plot(years,mn,xlab="",ylab="Density-dependence",bty="n",xaxt="n",type="n",ylim=c(min(mn-2*se),max(mn+2*se)),cex.lab=1.1)
 
   lines(years, rep(0,Nyears), lty="dashed")
   lines(years, mn, col=colr[j], lwd=3)
   lines(years, mn+2*se, col=colr[j])
   lines(years, mn-2*se, col=colr[j])
   abline(v=1991,lwd=3)
-  
+  title(titles[j],font=2,cex=0.9,line=1)
   # temporal trends in carrying capacity
-  par(mar=c(7,5,0,1))
-  mn <- ifelse(-log(exp(keoghDLM$states[state,]))/keoghDLM$states[state+1,]<0,NA,-log(exp(keoghDLM$states[state,]))/keoghDLM$states[state+1,])
-  plot(years,mn,xlab="",ylab="Freshwater capacity",bty="n",xaxt="n",type="n",cex.lab=1)
+  Smax <- pmax(0,1/-(keoghDLM$states[state,]),na.rm=TRUE)
+  Rmax <-  alphas[j,1]*Smax*exp(keoghDLM$states[state,]*Smax)
+  Kt <- -log(alphas[j,1])/keoghDLM$states[state,]
+  par(mar=c(5,5,2,1))
+  mn <- ifelse(Rmax<0,NA,Rmax)
+  plot(years,mn,xlab="",ylab="Freshwater capacity",bty="n",xaxt="n",type="n",cex.lab=1.1)
   lines(years, rep(0,Nyears), lty="dashed")
   lines(years, mn, col=colr[j], lwd=3)
   axis(1,at=seq(min(years),max(years),5),cex=2)
-  mtext("Brood year", 1, line=3,cex=1)
+  mtext("Brood year", 1, line=3,cex=0.9)
   abline(v=1991,lwd=3)
 }
 dev.off()
-matrix(coef(keoghDLM)$Q,nrow=10,byrow=FALSE)
-coef(keoghDLM)$D[order(coef(keoghDLM)$D),1]
-coef(keoghDLM)$C[order(coef(keoghDLM)$C),1]
-keoghDLM$par$A
-coef(keoghDLM)
-coef(keoghDLM)$C
-coef(keoghDLM,what="par.se")
 
-CIs <- MARSSboot(keoghDLM,nboot = 100,param.gen="MLE")
-
-d <- tidy(keoghDLM,type="states")
-bootyMcBoot <- MARSSparamCIs(keoghDLM)
-
-kf.out <- MARSSkfss(keoghDLM)
-
-Phi <- kf.out$Vtt1
-## obs variance; 1x1 matrix
-R.est <- coef(keoghDLM, type="matrix")$R
+# plot seals:
+jpeg("Figures/effect of seals.jpeg",width=7,height=5.5,units="in",res=800)
+species <- c("Steelhead","Dolly Varden","Cutthroat","Pink","Coho")
+layout(matrix(1:6,nrow=3,ncol=2,byrow=TRUE))
+par(mar=c(5,4,1,1))
+for(i in 1:length(species)){
+  plot(keogh_long$seals[keogh_long$Species==species[1]],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,adjustcolor(colr[i],1),adjustcolor(colr[i],0.5)),xlab="Seal densities",ylab="Strength of density-dependence")
+}
+dev.off()

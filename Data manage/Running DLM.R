@@ -18,7 +18,7 @@ recruits <- reshape(recruits,direction = "wide",idvar="Year",timevar="Species")
 juv_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink))
 fresh_enviro <- reshape(juv_enviro,direction = "wide",idvar="Year",timevar="Species")
 #fresh_enviro <- fresh_enviro[,-match(c("freshSteel.Pink","freshDolly.Pink","freshCutt.Pink","freshPink.Pink","freshCoho.Pink"),colnames(fresh_enviro))]
-adult_enviro <- subset(keogh_long,select = c(Year,Species,seals,npgo,mei,oceanSalmon))
+adult_enviro <- subset(keogh_long,select = c(Year,Species,seals,npgo,oceanSalmon))
 ocean_enviro <- reshape(adult_enviro,direction = "wide",idvar="Year",timevar="Species")
 
 freshEnviroNew <- fresh_enviro
@@ -32,7 +32,9 @@ mnCovarsOcean <- attr(scale(ocean_enviro[,-1],center=TRUE,scale=TRUE),"scaled:ce
 oceanCovarScale <- scale(ocean_enviro[,-1],center=TRUE,scale=TRUE)
 
 # all environmental predictors
-all_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,winRain,seals,npgo,oceanSalmon))
+all_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,winRain,freshCoho,seals,npgo,oceanSalmon))
+all_enviro$oceanSalmon <- residuals(lm(oceanSalmon~seals:Species,data=all_enviro))
+all_enviro$seals <- log(all_enviro$seals)
 all_covars <- reshape(all_enviro,direction = "wide",idvar="Year",timevar="Species")
 allEnviroNew <- all_covars
 sdCovarsAll <- attr(scale(all_covars[,-1],center=TRUE,scale=TRUE),"scaled:scale")
@@ -125,6 +127,32 @@ D4[grep("Dolly Varden",coefNames),2] <- coefNames[grep("Dolly Varden",coefNames)
 D4[grep("Cutthroat",coefNames),3] <- coefNames[grep("Cutthroat",coefNames)]
 D4[grep("Pink_",coefNames)[!grepl("fresh",coefNames[grep("Pink_",coefNames)])],4] <- coefNames[grep("Pink_",coefNames)][!grepl("fresh",coefNames[grep("Pink_",coefNames)])]
 D4[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
+
+# time-constant model
+d5 <- rbind(rep(1,Nyears),
+            adults$Stock.Steelhead,
+            rep(1,Nyears),
+            adults$`Stock.Dolly Varden`,
+            rep(1,Nyears),
+            adults$Stock.Cutthroat,
+            rep(1,Nyears),
+            adults$Stock.Pink,
+            rep(1,Nyears),
+            adults$Stock.Coho)
+row.names(d5) <- c("alpha.Steelhead","stock.Steelhead",
+                   "alpha.Dolly Varden","stock.Dolly Varden",
+                   "alpha.Cutthroat","stock.Cutthroat",
+                   "alpha.Pink","stock.Pink",
+                   "alpha.Coho","stock.Coho")
+
+#d3 <- rbind(d3,d2)
+D5 <- matrix(list(0),nrow=nrow(d5),ncol=Nspecies)
+coefNames <- paste("b",matrix(unlist(strsplit(row.names(d5),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(d5),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
+D5[grep("Steelhead",coefNames),1] <- coefNames[grep("Steelhead",coefNames)]
+D5[grep("Dolly Varden",coefNames),2] <- coefNames[grep("Dolly Varden",coefNames)]
+D5[grep("Cutthroat",coefNames),3] <- coefNames[grep("Cutthroat",coefNames)]
+D5[grep("Pink_",coefNames)[!grepl("fresh",coefNames[grep("Pink_",coefNames)])],4] <- coefNames[grep("Pink_",coefNames)][!grepl("fresh",coefNames[grep("Pink_",coefNames)])]
+D5[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
 
 # time-constant beta
 # NPGO, seals, pacific salmon, and mei affects observation model
@@ -241,10 +269,10 @@ initx <- 0
 model.listDLMspecies <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,d=d,D=D,C=C2,c=c,x0=x0,tinitx=initx)
 model.listDLMv2 <- list(B=B,U=U,Q=Q,Z=Z,A=A,R=R,d=d2,D=D2,x0=x0,tinitx=initx)
 
-model.listTVab <- list(B="diagonal and unequal",U=U,Q=Q,Z=Z,A=A,R=R,x0=x0,tinitx=initx)
-model.listTVa <- list(B="diagonal and unequal",U=U,Q="unconstrained",Z=Z2,A=A,R=R,d=d3,D=D3,x0=x0,tinitx=initx)
-model.listTVb <- list(B="diagonal and unequal",U=U,Q="unconstrained",Z=Z1,A=A,R=R,d=d4,D=D4,x0=x0,tinitx=initx)
-
+model.listTVab <- list(B=diag(m*Nspecies),U=U,Q=Q,Z=Z,A=A,R=R,x0=x0,tinitx=initx)
+model.listTVa <- list(B=diag(Nspecies),U=U,Q="unconstrained",Z=Z2,A=A,R=R,d=d3,D=D3,x0=x0,tinitx=initx)
+model.listTVb <- list(B=diag(Nspecies),U=U,Q="unconstrained",Z=Z1,A=A,R=R,d=d4,D=D4,x0=x0,tinitx=initx)
+model.listConab <- list(B="identity",Z="identity",U="zero",Q="zero",A=A,R=R,d=d5,D=D5,x0="zero",tinitx=initx)
 
 ln_RS_sh <- log(recruits$Recruits.Steelhead/adults$Stock.Steelhead)
 ln_RS_dv <- log(recruits$`Recruits.Dolly Varden`/adults$`Stock.Dolly Varden`)
@@ -254,31 +282,119 @@ ln_RS_co <- log(recruits$Recruits.Coho/adults$Stock.Coho)
 dat <- rbind(ln_RS_sh,ln_RS_dv,ln_RS_ct,ln_RS_pk,ln_RS_co)
 
 a <- apply(dat,1,mean,na.rm=TRUE)
-inits.list <- list(x0=array(matrix(rep(0,m), nrow=m),c(m,m,Nspecies)),A=matrix(a,Nspecies,1))
+inits.listTVab <- list(x0=array(matrix(rep(0,m), nrow=m),c(m,m,Nspecies)),A=matrix(a,Nspecies,1))
+inits.listTVa <- list(x0=array(matrix(rep(0,1), nrow=1),c(1,1,Nspecies)),A=matrix(a,Nspecies,1))
+inits.listTVb <- list(x0=array(matrix(rep(0,1), nrow=1),c(1,1,Nspecies)),A=matrix(a,Nspecies,1))
+inits.listConab <- list(A=matrix(a,Nspecies,1))
 
 begin <- Sys.time()
 begin
-keoghDLMTVab <- MARSS(dat, model=model.listTVab,control=list(maxit=25000,conv.test.slope.tol=0.5),inits=inits.list)
+keoghDLMTVab <- MARSS(dat, model=model.listTVab,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listTVab)
 end <- Sys.time()
 time_elapse <- end-begin
 time_elapse
 
 begin <- Sys.time()
 begin
-keoghDLMTVa <- MARSS(dat, model=model.listTVa,control=list(maxit=25000,conv.test.slope.tol=0.5),inits=inits.list)
+keoghDLMTVa <- MARSS(dat, model=model.listTVa,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listTVa)
 end <- Sys.time()
 time_elapse <- end-begin
 time_elapse
 
 begin <- Sys.time()
 begin
-keoghDLMTVb <- MARSS(dat, model=model.listTVb,control=list(maxit=25000,conv.test.slope.tol=0.5),inits=inits.list)
+keoghDLMTVb <- MARSS(dat, model=model.listTVb,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listTVb)
 end <- Sys.time()
 time_elapse <- end-begin
 time_elapse
 
-AIC(keoghDLMTVab,keoghDLMTVa,keoghDLMTVb)
+begin <- Sys.time()
+begin
+keoghConab <- MARSS(dat, model=model.listConab,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listConab)
+end <- Sys.time()
+time_elapse <- end-begin
+time_elapse
+
+AIC(keoghDLMTVab,keoghDLMTVa,keoghDLMTVb,keoghConab)
+AICres <- data.frame("Model"=c("time-varying a,b","time-varying a","time-varying b","time-constant a,b"),"df"=c(keoghDLMTVab$num.params,keoghDLMTVa$num.params,keoghDLMTVb$num.params,keoghConab$num.params),"AICc"=c(keoghDLMTVab$AICc,keoghDLMTVa$AICc,keoghDLMTVb$AICc,keoghConab$AICc))
+AICres$dAIC <- AICres$AICc-min(AICres$AICc)
+AICres[order(AICres$dAIC),]
+saveRDS(keoghDLMTVb,"Results/keoghDLM_tvar.rds")
+
+# run time-varying beta model with covariates
+dCovar <- rbind(rep(1,Nyears),
+            rep(1,Nyears),
+            rep(1,Nyears),
+            rep(1,Nyears),
+            rep(1,Nyears))
+row.names(dCovar) <- c("alpha.Steelhead","alpha.Dolly Varden","alpha.Cutthroat","alpha.Pink","alpha.Coho")
+dCovar <- rbind(dCovar[1,],d2[grep("\\.Steelhead",row.names(d2)),],
+                dCovar[2,],d2[grep("\\.Dolly Varden",row.names(d2)),],
+                dCovar[3,],d2[grep("\\.Cutthroat",row.names(d2)),],
+                dCovar[4,],d2[grep("\\.Pink",row.names(d2)),],
+                dCovar[5,],d2[grep("\\.Coho",row.names(d2)),])
+row.names(dCovar)[row.names(dCovar)==""] <- c("alpha.Steelhead","alpha.Dolly Varden","alpha.Cutthroat","alpha.Pink","alpha.Coho")
+Dcovar <- matrix(list(0),nrow=nrow(dCovar),ncol=Nspecies)
+coefNames <- paste("b",matrix(unlist(strsplit(row.names(dCovar),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(dCovar),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
+Dcovar[grep("Steelhead",coefNames),1] <- coefNames[grep("Steelhead",coefNames)]
+Dcovar[grep("Dolly Varden",coefNames),2] <- coefNames[grep("Dolly Varden",coefNames)]
+Dcovar[grep("Cutthroat",coefNames),3] <- coefNames[grep("Cutthroat",coefNames)]
+Dcovar[grep("Pink_",coefNames)[!grepl("fresh",coefNames[grep("Pink_",coefNames)])],4] <- coefNames[grep("Pink_",coefNames)][!grepl("fresh",coefNames[grep("Pink_",coefNames)])]
+Dcovar[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
+
+# create a C matrix just for the time-varying beta model
+c3 <- rbind(t(allCovarScale))
+C3 <- matrix(list(0),nrow=Nspecies,ncol=nrow(c3))
+coefNames <- paste("b",matrix(unlist(strsplit(row.names(c3),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(c3),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
+C3[1,grep("Steelhead",coefNames)] <- coefNames[grep("Steelhead",coefNames)]
+C3[2,grep("Dolly Varden",coefNames)] <- coefNames[grep("Dolly Varden",coefNames)]
+C3[3,grep("Cutthroat",coefNames)] <- coefNames[grep("Cutthroat",coefNames)]
+C3[4,grep("Pink_",coefNames)] <- coefNames[grep("Pink_",coefNames)]
+C3[5,grep("Coho_",coefNames)] <- coefNames[grep("Coho_",coefNames)]
+
+# create a model matrix for the time-varying beta model with covariates
+model.listTVbCovar <- list(B=diag(Nspecies),U=U,Q="unconstrained",Z=Z1,A=A,R=R,c=c3,C=C3,d=d4,D=D4,x0=x0,tinitx=initx)
+begin <- Sys.time()
+begin
+keoghDLMspecies <- MARSS(dat, model=model.listTVbCovar,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listTVb)
+end <- Sys.time()
+time_elapse <- end-begin
+time_elapse
+
 saveRDS(keoghDLMspecies,"Results/keoghDLM.rds")
+
+# get 95% CIS for model coefficients for bootstrap
+begin <- Sys.time()
+begin
+CIs <- MARSSboot(keoghDLMspecies,nboot = 100,param.gen="MLE")
+end <- Sys.time()
+time_elapse <- end-begin
+time_elapse
+CI_95s <- apply(CIs$boot.params,1,quantile,probs=c(0.1,0.9))
+CI_med <- apply(CIs$boot.params,1,median)
+covarDD <- rbind(CI_med[grep("U.b_",colnames(CI_95s))],CI_95s[,grep("U.b_",colnames(CI_95s))])
+sd_b <- sqrt(diag(coef(keoghDLMspecies,type="matrix")$Q))
+sd_b <- sapply(1:Nspecies,function(x){sd(keoghDLMspecies$states[x,])})
+names(sd_b) <- unique(keogh_long$Species)
+std_beta <- sapply(1:ncol(covarDD),function(x){covarDD[,x]/rep(sd_b,times=c(6,6,6,6,6))[x]})
+colnames(std_beta) <- colnames(covarDD)
+
+varNames <- apply(matrix(unlist(strsplit(colnames(std_beta),"_")),ncol=3,byrow=TRUE)[,2:3],1,paste,collapse=" | ",sep="")
+jpeg("effect sizes.jpeg",width=6,height=6,units="in",res=800)
+par(mar=c(5,12,3,3))
+plot(std_beta[1,],1:length(colnames(std_beta)),xlim=c(-3,3),pch=21,bg="dodgerblue",yaxt="n",xlab="Effect size",ylab="",cex=1.2)
+#grid(NULL,NULL,lty=6,col="grey70")
+abline(v=c(-4,-2,0,2,4),lty=6,col="grey70")
+abline(h=c(6.5,12.5,18.5,24.5),lty=6,col="grey70")
+segments(x0=std_beta[2,],y0=1:length(colnames(std_beta)),x1=std_beta[3,],col="black",lwd=2)
+abline(v=0,lwd=2,lty=2,col="black")
+sig <- sapply(1:ncol(std_beta),function(x){any(all(std_beta[,x] > 0) | all(std_beta[,x] < 0)) })
+points(std_beta[1,!sig],(1:ncol(std_beta))[!sig],pch=21,bg="dodgerblue",cex=1.2)
+points(std_beta[1,sig],(1:ncol(std_beta))[sig],pch=21,bg="tomato",cex=1.5)
+axis(2,at=1:ncol(std_beta),labels=varNames,las=2,cex.axis=0.8)
+text(2,31.5,"Increased density-dependence",xpd=NA,cex=0.7,font=2)
+text(-2,31.5,"Reduced density-dependence",xpd=NA,cex=0.7,font=2)
+dev.off()
 
 keoghAllfit <- augment(keoghDLMspecies, interval="confidence")
 keoghAllfit$Year <- keoghAllfit$t + 1975
@@ -289,3 +405,40 @@ p <- ggplot(data = keoghAllfit) +
 p <- p + geom_point(data=keoghAllfit, mapping = aes(x=Year, y=y))
 p + xlab("") + ylab("ln_RS") + facet_wrap(~Species)
 
+matplot(t(keoghDLMspecies$states))
+
+plot(c3[4,],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+lines(c3[4,],c(0,keoghDLMspecies$states[1,1:(Nyears-1)]+coef(keoghDLMspecies)$C[4,1]*c3[4,2:Nyears]))
+coef(keoghDLMspecies,type="matrix")$C
+
+coef(keoghDLMspecies)$C
+#
+layout(matrix(1:6,nrow=3,ncol=2,byrow=TRUE))
+par(mar=c(5,4,1,1))
+plot(c3[grep("seals",row.names(c3))[1],],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"),xlab="Seals",ylab="Density-dependence")
+plot(c3[grep("seals",row.names(c3))[2],],keoghDLMspecies$states[2,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"),xlab="Seals",ylab="Density-dependence")
+plot(c3[grep("seals",row.names(c3))[3],],keoghDLMspecies$states[3,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"),xlab="Seals",ylab="Density-dependence")
+plot(c3[grep("seals",row.names(c3))[4],],keoghDLMspecies$states[4,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"),xlab="Seals",ylab="Density-dependence")
+plot(c3[grep("seals",row.names(c3))[5],],keoghDLMspecies$states[5,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"),xlab="Seals",ylab="Density-dependence")
+
+plot(c3[1,],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+plot(c3[4,],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+plot(c3[6,],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+
+plot(c3[27,],keoghDLMspecies$states[5,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+plot(c3[29,],keoghDLMspecies$states[5,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+
+coef(keoghDLMspecies)$C
+plot(c3[3,],keoghDLMspecies$states[2,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+plot(c3[10,],keoghDLMspecies$states[2,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+plot(c3[12,],keoghDLMspecies$states[2,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
+
+
+plot(keoghDLMspecies$states[1,1]+coef(keoghDLMspecies)$C[4,1]*c3[4,2:Nyears],keoghDLMspecies$states[1,2:(Nyears)])
+abline(b=1,a=0)
+
+plot(coef(keoghDLMspecies)$C[4,1]*c3[4,2:Nyears],keoghDLMspecies$states[1,2:(Nyears)])
+
+plot(coef(keoghDLMspecies)$D[1]+keoghDLMspecies$states[1,]*adults$Stock.Steelhead,dat[1,])
+abline(b=1,a=0)
+plot(seals~Year,data=keogh_long)
