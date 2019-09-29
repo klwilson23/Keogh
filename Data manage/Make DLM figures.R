@@ -269,3 +269,12 @@ for(i in 1:length(species)){
   plot(keogh_long$seals[keogh_long$Species==species[1]],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,adjustcolor(colr[i],1),adjustcolor(colr[i],0.5)),xlab="Seal densities",ylab="Strength of density-dependence")
 }
 dev.off()
+
+corr_mat <- coef(keoghDLMspecies,type="matrix")$Q
+
+for(i in 1:nrow(coef(keoghDLMspecies,type="matrix")$Q)){
+  for(j in 1:nrow(coef(keoghDLMspecies,type="matrix")$Q))
+  {
+    corr_mat[i,j] <- coef(keoghDLMspecies,type="matrix")$Q[i,j]/(sqrt(diag(coef(keoghDLMspecies,type="matrix")$Q)[i])*sqrt(diag(coef(keoghDLMspecies,type="matrix")$Q)[j]))
+  }
+}
