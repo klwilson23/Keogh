@@ -15,10 +15,12 @@ adults <- reshape(adults,direction = "wide",idvar="Year",timevar="Species")
 recruits <- subset(keogh_long,select = c(Year,Species,Recruits))
 recruits <- reshape(recruits,direction = "wide",idvar="Year",timevar="Species")
 
-juv_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink))
+juv_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho))
 fresh_enviro <- reshape(juv_enviro,direction = "wide",idvar="Year",timevar="Species")
 #fresh_enviro <- fresh_enviro[,-match(c("freshSteel.Pink","freshDolly.Pink","freshCutt.Pink","freshPink.Pink","freshCoho.Pink"),colnames(fresh_enviro))]
 adult_enviro <- subset(keogh_long,select = c(Year,Species,seals,npgo,oceanSalmon))
+adult_enviro$oceanSalmon <- residuals(lm(oceanSalmon~seals:Species,data=adult_enviro))
+
 ocean_enviro <- reshape(adult_enviro,direction = "wide",idvar="Year",timevar="Species")
 
 freshEnviroNew <- fresh_enviro
@@ -33,8 +35,8 @@ oceanCovarScale <- scale(ocean_enviro[,-1],center=TRUE,scale=TRUE)
 
 # all environmental predictors
 all_enviro <- subset(keogh_long,select = c(Year,Species,sumTemp,winRain,freshCoho,seals,npgo,oceanSalmon))
-all_enviro$oceanSalmon <- residuals(lm(oceanSalmon~seals:Species,data=all_enviro))
-all_enviro$seals <- log(all_enviro$seals)
+all_enviro$seals <- residuals(lm(seals~oceanSalmon:Species,data=all_enviro))
+#all_enviro$seals <- log(all_enviro$seals)
 all_covars <- reshape(all_enviro,direction = "wide",idvar="Year",timevar="Species")
 allEnviroNew <- all_covars
 sdCovarsAll <- attr(scale(all_covars[,-1],center=TRUE,scale=TRUE),"scaled:scale")
@@ -89,7 +91,7 @@ D[grep("Pink_",coefNames),4] <- coefNames[grep("Pink_",coefNames)]
 D[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
 
 
-d2 <- t(allCovarScale)
+d2 <- rbind(t(freshCovarScale))
 D2 <- matrix(list(0),nrow=nrow(d2),ncol=Nspecies)
 coefNames <- paste("b",matrix(unlist(strsplit(row.names(d2),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(d2),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
 D2[grep("Steelhead",coefNames),1] <- coefNames[grep("Steelhead",coefNames)]
@@ -343,7 +345,7 @@ Dcovar[grep("Pink_",coefNames)[!grepl("fresh",coefNames[grep("Pink_",coefNames)]
 Dcovar[grep("Coho_",coefNames),5] <- coefNames[grep("Coho_",coefNames)]
 
 # create a C matrix just for the time-varying beta model
-c3 <- rbind(t(allCovarScale))
+c3 <- rbind(t(oceanCovarScale))
 C3 <- matrix(list(0),nrow=Nspecies,ncol=nrow(c3))
 coefNames <- paste("b",matrix(unlist(strsplit(row.names(c3),"\\.")),ncol=2,byrow=TRUE)[,2],matrix(unlist(strsplit(row.names(c3),"\\.")),ncol=2,byrow=TRUE)[,1],sep="_")
 C3[1,grep("Steelhead",coefNames)] <- coefNames[grep("Steelhead",coefNames)]
@@ -353,7 +355,7 @@ C3[4,grep("Pink_",coefNames)] <- coefNames[grep("Pink_",coefNames)]
 C3[5,grep("Coho_",coefNames)] <- coefNames[grep("Coho_",coefNames)]
 
 # create a model matrix for the time-varying beta model with covariates
-model.listTVbCovar <- list(B=diag(Nspecies),U=U,Q="unconstrained",Z=Z1,A=A,R=R,c=c3,C=C3,d=d4,D=D4,x0=x0,tinitx=initx)
+model.listTVbCovar <- list(B=diag(Nspecies),U=U,Q="unconstrained",Z=Z1,A=A,R=R,c=c3,C=C3,d=dCovar,D=Dcovar,x0=x0,tinitx=initx)
 begin <- Sys.time()
 begin
 keoghDLMspecies <- MARSS(dat, model=model.listTVbCovar,control=list(maxit=10000,conv.test.slope.tol=0.3),inits=inits.listTVb)
@@ -366,7 +368,7 @@ saveRDS(keoghDLMspecies,"Results/keoghDLM.rds")
 # get 95% CIS for model coefficients for bootstrap
 begin <- Sys.time()
 begin
-CIs <- MARSSboot(keoghDLMspecies,nboot = 100,param.gen="MLE")
+CIs <- MARSSboot(keoghDLMspecies,nboot = 250,param.gen="MLE")
 end <- Sys.time()
 time_elapse <- end-begin
 time_elapse
@@ -376,25 +378,54 @@ covarDD <- rbind(CI_med[grep("U.b_",colnames(CI_95s))],CI_95s[,grep("U.b_",colna
 sd_b <- sqrt(diag(coef(keoghDLMspecies,type="matrix")$Q))
 sd_b <- sapply(1:Nspecies,function(x){sd(keoghDLMspecies$states[x,])})
 names(sd_b) <- unique(keogh_long$Species)
-std_beta <- sapply(1:ncol(covarDD),function(x){covarDD[,x]/rep(sd_b,times=c(6,6,6,6,6))[x]})
+std_beta <- sapply(1:ncol(covarDD),function(x){covarDD[,x]/rep(sd_b,times=c(3,3,3,3,3))[x]})
 colnames(std_beta) <- colnames(covarDD)
 
 varNames <- apply(matrix(unlist(strsplit(colnames(std_beta),"_")),ncol=3,byrow=TRUE)[,2:3],1,paste,collapse=" | ",sep="")
-jpeg("effect sizes.jpeg",width=6,height=6,units="in",res=800)
+jpeg("effect sizes.jpeg",width=8,height=6,units="in",res=800)
+layout(1)
 par(mar=c(5,12,3,3))
-plot(std_beta[1,],1:length(colnames(std_beta)),xlim=c(-3,3),pch=21,bg="dodgerblue",yaxt="n",xlab="Effect size",ylab="",cex=1.2)
+plot(std_beta[1,],1:length(colnames(std_beta)),xlim=c(-1,1),pch=21,bg="dodgerblue",yaxt="n",xlab="Effect size",ylab="",cex=1.2)
 #grid(NULL,NULL,lty=6,col="grey70")
 abline(v=c(-4,-2,0,2,4),lty=6,col="grey70")
-abline(h=c(6.5,12.5,18.5,24.5),lty=6,col="grey70")
+abline(h=c(3.5,6.5,9.5,12.5),lty=6,col="grey70")
 segments(x0=std_beta[2,],y0=1:length(colnames(std_beta)),x1=std_beta[3,],col="black",lwd=2)
 abline(v=0,lwd=2,lty=2,col="black")
 sig <- sapply(1:ncol(std_beta),function(x){any(all(std_beta[,x] > 0) | all(std_beta[,x] < 0)) })
 points(std_beta[1,!sig],(1:ncol(std_beta))[!sig],pch=21,bg="dodgerblue",cex=1.2)
 points(std_beta[1,sig],(1:ncol(std_beta))[sig],pch=21,bg="tomato",cex=1.5)
 axis(2,at=1:ncol(std_beta),labels=varNames,las=2,cex.axis=0.8)
-text(2,31.5,"Increased density-dependence",xpd=NA,cex=0.7,font=2)
-text(-2,31.5,"Reduced density-dependence",xpd=NA,cex=0.7,font=2)
+text(0.5,16,"Reduced density-dependence",xpd=NA,cex=0.7,font=2)
+text(-0.5,16,"Increased density-dependence",xpd=NA,cex=0.7,font=2)
 dev.off()
+
+covarDD <- rbind(CI_med[grep("A.b_",colnames(CI_95s))],CI_95s[,grep("A.b_",colnames(CI_95s))])
+covarDD <- covarDD[,-grep("alpha",colnames(covarDD))]
+sd_b <- sapply(1:Nspecies,function(x){sd(dat[x,],na.rm=TRUE)})
+names(sd_b) <- unique(keogh_long$Species)
+std_beta <- sapply(1:ncol(covarDD),function(x){covarDD[,x]/rep(sd_b,times=c(5,5,5,5,5))[x]})
+colnames(std_beta) <- colnames(covarDD)
+
+varNames <- apply(matrix(unlist(strsplit(colnames(std_beta),"_")),ncol=3,byrow=TRUE)[,2:3],1,paste,collapse=" | ",sep="")
+jpeg("effect sizes on productivity.jpeg",width=8,height=6,units="in",res=800)
+layout(1)
+par(mar=c(5,12,3,3))
+plot(std_beta[1,],1:length(colnames(std_beta)),xlim=c(-4,4),pch=21,bg="dodgerblue",yaxt="n",xlab="Effect size",ylab="",cex=1.2)
+#grid(NULL,NULL,lty=6,col="grey70")
+abline(v=c(-4,-2,0,2,4),lty=6,col="grey70")
+abline(h=c(5.5,10.5,15.5,20.5),lty=6,col="grey70")
+segments(x0=std_beta[2,],y0=1:length(colnames(std_beta)),x1=std_beta[3,],col="black",lwd=2)
+abline(v=0,lwd=2,lty=2,col="black")
+sig <- sapply(1:ncol(std_beta),function(x){any(all(std_beta[,x] > 0) | all(std_beta[,x] < 0)) })
+points(std_beta[1,!sig],(1:ncol(std_beta))[!sig],pch=21,bg="dodgerblue",cex=1.2)
+points(std_beta[1,sig],(1:ncol(std_beta))[sig],pch=21,bg="tomato",cex=1.5)
+axis(2,at=1:ncol(std_beta),labels=varNames,las=2,cex.axis=0.8)
+text(2,25.5,"Increased productivity",xpd=NA,cex=0.7,font=2)
+text(-2,25.5,"Reduced productivity",xpd=NA,cex=0.7,font=2)
+dev.off()
+
+keoghDLMspecies$AICc
+keoghDLMspecies$num.params
 
 keoghAllfit <- augment(keoghDLMspecies, interval="confidence")
 keoghAllfit$Year <- keoghAllfit$t + 1975
@@ -408,7 +439,7 @@ p + xlab("") + ylab("ln_RS") + facet_wrap(~Species)
 matplot(t(keoghDLMspecies$states))
 
 plot(c3[4,],keoghDLMspecies$states[1,],pch=21,bg=ifelse(years>1990,"orange","dodgerblue"))
-lines(c3[4,],c(0,keoghDLMspecies$states[1,1:(Nyears-1)]+coef(keoghDLMspecies)$C[4,1]*c3[4,2:Nyears]))
+lines(c3[4,],c(0,keoghDLMspecies$states[1,1:(Nyears-1)]+coef(keoghDLMspecies)$C[3,1]*c3[4,2:Nyears]))
 coef(keoghDLMspecies,type="matrix")$C
 
 coef(keoghDLMspecies)$C
