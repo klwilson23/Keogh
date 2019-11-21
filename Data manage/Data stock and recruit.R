@@ -1,5 +1,8 @@
 library(reshape2)
 library(igraph)
+library(ggplot2)
+library(ggridges)
+library(viridis)
 source("some functions.R")
 data_check <- "new"
 
@@ -636,3 +639,70 @@ dev.off()
 saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
 saveRDS(keogh_long,"Keogh_SR_enviro_long.rds")
 write.csv(keogh_long,"Keogh_StockRecruitment.csv",row.names=F)
+
+# keogh river adult run timing:
+keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
+
+sh_adults <- keogh[keogh$species=="sh" & keogh$life_stage=="a" & keogh$direction!="d" & !is.na(keogh$julian) & (keogh$method=="trap"|keogh$method=="angled"|is.na(keogh$method)|keogh$method==""),]
+base_date <- 319 #julian date of year where run time could begin
+sh_adults <- sh_adults[!(sh_adults$julian<=base_date & sh_adults$julian>=250),]
+sh_adults$run_year <- ifelse(sh_adults$julian>=base_date,sh_adults$year+1,sh_adults$year)
+sh_adults <- sh_adults[sh_adults$run_year>=1976,]
+sh_adults$run_date <- ifelse((sh_adults$julian-base_date)<=0,sh_adults$julian-base_date+366,sh_adults$julian-base_date)
+#sh_adults$run_date <- sh_adults$run_date-min(sh_adults$run_date,na.rm=TRUE)
+sh_adults$number <- ifelse(is.na(sh_adults$number),1,sh_adults$number)
+
+mn_run <- sapply(unique(sh_adults$run_year),function(x){sum(sh_adults$run_date[sh_adults$run_year==x]*sh_adults$number[sh_adults$run_year==x],na.rm=TRUE)/sum(sh_adults$number[sh_adults$run_year==x],na.rm=TRUE)})
+names(mn_run) <- unique(sh_adults$run_year)
+run_time <- data.frame("Year"=as.numeric(as.character(names(mn_run))),"Mn_Run"=mn_run)
+run_time <- run_time[order(run_time$Year),]
+sh_adults$mn_run <- sum(sh_adults$run_date*sh_adults$number)/sh_adults$number
+
+jpeg("Figures/run date through time.jpeg",width=6,height=5,units="in",res=800)
+plot(run_date~run_year,data=sh_adults,pch=21,bg="grey80",xlab="Brood year",ylab="Run date (starting Nov. 15th)")
+lines(run_time$Year,run_time$Mn_Run,lwd=3,col="red")
+dev.off()
+
+sh_SR <- keogh_long[keogh_long$Species=="Steelhead" & keogh_long$Year>=1976 & keogh_long$Year<=2017,]
+sh_SR$Year
+
+jpeg("Figures/drivers of steelhead run date and smolt production.jpeg",width=6,height=5,units="in",res=800)
+layout(matrix(1:4,ncol=2,nrow=2,byrow=TRUE))
+par(mar=c(5,4,1,1))
+plot(sh_SR$seals,-log(sh_SR$Stock/sh_SR$juvCohort),ylab="Marine mortality (stage-1)",xlab="Seal density")
+abline(lm(-log(sh_SR$Stock/sh_SR$juvCohort)~sh_SR$seals),lwd=2,col="red")
+
+plot(sh_SR$oceanSalmon,-log(sh_SR$Stock/sh_SR$juvCohort),ylab="Marine mortality (stage-1)",xlab="Pacific salmon biomass")
+abline(lm(-log(sh_SR$Stock/sh_SR$juvCohort)~sh_SR$oceanSalmon),lwd=2,col="red")
+
+plot(sh_SR$seals,run_time$Mn_Run,xlab="Seal density",ylab="Average run date")
+lines(smooth.spline(sh_SR$seals,run_time$Mn_Run),lwd=2,col="red")
+
+plot(run_time$Mn_Run,sh_SR$Recruits,xlab="Average run date",ylab="Smolts")
+lines(smooth.spline(run_time$Mn_Run[!is.na(sh_SR$Recruits)],sh_SR$Recruits[!is.na(sh_SR$Recruits)]),lwd=2,col="red")
+
+dev.off()
+#lines(spline(sh_adults$run_year,sh_adults$run_date),lwd=2,col="red")
+names(mn_run) <- unique(sh_adults$run_year)
+run_time <- data.frame("Year"=as.numeric(as.character(names(mn_run))),"Mn_Run"=mn_run)
+run_time <- run_time[order(run_time$Year),]
+
+# create new dataframe repeating number of adults per run date:
+adult_run <- data.frame("Year"=rep(sh_adults$run_year,sh_adults$number),"Run"=rep(sh_adults$run_date,sh_adults$number))
+adult_run <- adult_run[order(adult_run$Year),]
+
+yr_run <- aggregate(Run~Year,data=adult_run,FUN=mean)
+yr_run$sd <- aggregate(Run~Year,data=adult_run,FUN=sd)$Run
+plot(sd~Year,data=yr_run)
+plot(sd~Run,data=yr_run)
+adult_run$Year <- factor(adult_run$Year,levels=rev(unique(sort(adult_run$Year))))
+ggplot(adult_run, aes(x = Run, y=as.factor(Year),fill=..x..)) + 
+  geom_density_ridges_gradient(scale=2.5,rel_min_height=1e-3) +
+  scale_x_continuous(name="Run date (starting Nov. 15th)",expand=c(0.01,0)) +
+  scale_y_discrete(expand=c(0.01,0)) +
+  #scale_fill_viridis(name="Run time",option="C") +
+  theme_ridges(font_size=13,grid=TRUE,center=TRUE) + 
+  theme(axis.title.y=element_blank()) +
+  scale_fill_gradient2(name="Run date",low="blue",high="orange",mid="dodgerblue",midpoint=75)
+
+ggsave(filename="Figures/runtime.jpeg",units="in",height=7,width=6,dpi=800)
