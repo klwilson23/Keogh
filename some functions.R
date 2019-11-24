@@ -70,3 +70,25 @@ Corner_text <- function(text, location="topright",...)
 {
   legend(location,legend=text, bty ="n", pch=NA,...)
 }
+
+roll_mean <- function(x,lag)
+{
+  bin <- lag-1
+  run_mean <- rep(NA,length(x))
+  for(i in lag:length(x))
+  {
+    run_mean[i] <- mean(x[(i-(bin)):i],na.rm=TRUE)
+  }
+  return(run_mean)
+}
+
+roll_mean_forward <- function(x,lag)
+{
+  bin <- lag-1
+  run_mean <- rep(NA,length(x))
+  for(i in 1:(length(x)-lag))
+  {
+    run_mean[i] <- mean(x[i:(i+(lag))],na.rm=TRUE)
+  }
+  return(run_mean)
+}

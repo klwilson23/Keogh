@@ -3,7 +3,31 @@ library(igraph)
 library(ggplot2)
 library(ggridges)
 library(viridis)
+library(weathercan)
+library(zoo)
 source("some functions.R")
+
+# download weather canada data
+# Download them separately for the whole time range
+# (NAs on the ends they will be trimmed, as you saw)
+s1 <- weather_dl(station_ids = 202, start = "1975-01-01", end = "2018-12-31",
+                 interval = "day")
+s2 <- weather_dl(station_ids = 51319, start = "1975-01-01", end = "2018-12-31",
+                 interval = "day")
+portHardy_pg <- rbind(s1, s2)
+duration <- 14 # how many days of rain/temperature before steelhead make run
+portHardy_pg$mean_temp_run <- roll_mean(portHardy_pg$mean_temp,duration)
+portHardy_pg$max_temp_run <- roll_mean(portHardy_pg$max_temp,duration)
+portHardy_pg$min_temp_run <- roll_mean(portHardy_pg$min_temp,duration)
+portHardy_pg$total_rain_run <- roll_mean(portHardy_pg$total_rain,duration)
+
+incubation <- 30
+portHardy_pg$total_rain_egg <- roll_mean_forward(portHardy_pg$total_rain,incubation)
+portHardy_pg$mean_temp_egg <- roll_mean_forward(portHardy_pg$mean_temp,incubation)
+
+ggplot(data = portHardy_pg, aes(x = date, y = mean_temp_run, colour = factor(station_id))) +
+  geom_point()
+
 data_check <- "new"
 
 co_lag <- 1 # fixed freshwater residency for coho: 1 year on average from Wade & Irvine 2018 report from Keogh and Holtby et al. 1990 CJFAS paper from Carnation Creek
@@ -641,62 +665,100 @@ saveRDS(keogh_long,"Keogh_SR_enviro_long.rds")
 write.csv(keogh_long,"Keogh_StockRecruitment.csv",row.names=F)
 
 # keogh river adult run timing:
+
 keogh <- read.csv("Data/Keogh_Database_Final_01oct18.csv",stringsAsFactors = F,header=T)
+keogh[keogh$scale=="y " | keogh$scale=="Y","scale"] <- "y"
+
+keogh$life_stage[keogh$life_stage=="F"] <- "f"
+keogh$life_stage[keogh$life_stage==" "] <- ""
+
+keogh$total_age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])+sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
+
+keogh$age2 <- as.numeric(keogh$fresh_age)
+keogh$age_final <- ifelse(!is.na(keogh$total_age),keogh$age_final,keogh$X1_ager)
+keogh$age <- sapply(keogh$age_final,function(x){as.numeric(strsplit(x,split="\\.")[[1]][1])})
+keogh$OceanAge <- sapply(keogh$age_final,function(x){sum(as.numeric(strsplit(gsub("[^[:digit:]]","",strsplit(x,split="\\.")[[1]][2]),split="")[[1]]))+nchar(gsub("[[:digit:]]","",strsplit(x,split="\\.")[[1]][2]))})
+
+keogh$AdultStrat <- sapply(keogh$age_final,function(x){strsplit(x,split="\\.")[[1]][2]})
+# set ocean ages for all fish, smolts are given age 0 in the ocean
+keogh$age_ocean <- as.numeric(keogh$OceanAge)
+keogh$age_ocean[keogh$life_stage=="s"] <- 0
+# assign brood year to fish as the total freshwater and ocean ages
+keogh$hatch_year <- ifelse(keogh$life_stage=="s",keogh$year - keogh$age, keogh$year-(keogh$total_age)) # if adult, brood year is current year minus total age
+keogh$smolt_year <- keogh$year-(keogh$age_ocean)
+
+keogh$sampAge <- keogh$age+keogh$age_ocean
+adult_life <- individuals[individuals$life_stage=="a"|individuals$life_stage=="k",]
+fresh_ocean_ages <- as.factor(paste(adult_life$age,adult_life$age_ocean,sep="|"))
 
 sh_adults <- keogh[keogh$species=="sh" & keogh$life_stage=="a" & keogh$direction!="d" & !is.na(keogh$julian) & (keogh$method=="trap"|keogh$method=="angled"|is.na(keogh$method)|keogh$method==""),]
+
+sh_adults$date <- as.Date(format(strptime(sh_adults$date, format = "%d-%b-%y"), "%Y-%m-%d"))
+sh_adults$number <- ifelse(is.na(sh_adults$number),1,sh_adults$number)
 base_date <- 319 #julian date of year where run time could begin
 sh_adults <- sh_adults[!(sh_adults$julian<=base_date & sh_adults$julian>=250),]
 sh_adults$run_year <- ifelse(sh_adults$julian>=base_date,sh_adults$year+1,sh_adults$year)
 sh_adults <- sh_adults[sh_adults$run_year>=1976,]
 sh_adults$run_date <- ifelse((sh_adults$julian-base_date)<=0,sh_adults$julian-base_date+366,sh_adults$julian-base_date)
-#sh_adults$run_date <- sh_adults$run_date-min(sh_adults$run_date,na.rm=TRUE)
-sh_adults$number <- ifelse(is.na(sh_adults$number),1,sh_adults$number)
 
-mn_run <- sapply(unique(sh_adults$run_year),function(x){sum(sh_adults$run_date[sh_adults$run_year==x]*sh_adults$number[sh_adults$run_year==x],na.rm=TRUE)/sum(sh_adults$number[sh_adults$run_year==x],na.rm=TRUE)})
-names(mn_run) <- unique(sh_adults$run_year)
-run_time <- data.frame("Year"=as.numeric(as.character(names(mn_run))),"Mn_Run"=mn_run)
-run_time <- run_time[order(run_time$Year),]
-sh_adults$mn_run <- sum(sh_adults$run_date*sh_adults$number)/sh_adults$number
+sh_adults$sex_est <- ifelse(grepl("f",sh_adults$sex),1,ifelse(grepl("m",sh_adults$sex),0,NA))
+# create new dataframe repeating number of adults per run date:
+adult_run <- data.frame("year"=rep(sh_adults$run_year,sh_adults$number),"date"=rep(sh_adults$date,sh_adults$number),"run"=rep(sh_adults$run_date,sh_adults$number),"size"=rep(sh_adults$fork_length,sh_adults$number),"age"=rep(sh_adults$age_ocean,sh_adults$number),"sex"=rep(sh_adults$sex_est,sh_adults$number))
+adult_run <- adult_run[order(adult_run$date),]
+
+# Bind the rows together
+adult_run <- merge(adult_run,portHardy_pg[,c("date","mean_temp_run","max_temp_run","min_temp_run","total_rain_run","mean_temp_egg","total_rain_egg")],by=c("date"))
+adult_run$cum_sum <- unlist(sapply(unique(adult_run$year),function(x){(1:sum(adult_run$year==x))/sum(adult_run$year==x)}))
+adult_run$peak <- unlist(sapply(unique(adult_run$year),function(x){rep(table(adult_run$run[adult_run$year==x])/max(table(adult_run$run[adult_run$year==x])),table(adult_run$run[adult_run$year==x]))}))
+#sh_adults$run_date <- sh_adults$run_date-min(sh_adults$run_date,na.rm=TRUE)
+run_time <- aggregate(cbind(run,size,age,peak,sex,mean_temp_run,max_temp_run,min_temp_run,total_rain_run,mean_temp_egg,total_rain_egg)~year,data=adult_run,FUN=mean,na.rm=TRUE)
 
 jpeg("Figures/run date through time.jpeg",width=6,height=5,units="in",res=800)
-plot(run_date~run_year,data=sh_adults,pch=21,bg="grey80",xlab="Brood year",ylab="Run date (starting Nov. 15th)")
-lines(run_time$Year,run_time$Mn_Run,lwd=3,col="red")
+layout(1)
+par(mar=c(5,4,1,1))
+plot(run~year,data=adult_run,pch=21,bg="grey80",xlab="Brood year",ylab="Run date (starting Nov. 15th)")
+lines(run_time$year,run_time$run,lwd=3,col="red")
 dev.off()
 
 sh_SR <- keogh_long[keogh_long$Species=="Steelhead" & keogh_long$Year>=1976 & keogh_long$Year<=2017,]
-sh_SR$Year
+colnames(sh_SR)[colnames(sh_SR)=="Year"] <- "year"
+run_time <- merge(run_time,sh_SR,by="year")
+
+run_time$logit_surv <- log((run_time$Stock/run_time$juvCohort)/(1-(run_time$Stock/run_time$juvCohort)))
 
 jpeg("Figures/drivers of steelhead run date and smolt production.jpeg",width=6,height=5,units="in",res=800)
-layout(matrix(1:4,ncol=2,nrow=2,byrow=TRUE))
+layout(matrix(1:6,ncol=2,nrow=3,byrow=TRUE))
 par(mar=c(5,4,1,1))
-plot(sh_SR$seals,-log(sh_SR$Stock/sh_SR$juvCohort),ylab="Marine mortality (stage-1)",xlab="Seal density")
-abline(lm(-log(sh_SR$Stock/sh_SR$juvCohort)~sh_SR$seals),lwd=2,col="red")
+plot(run_time$seals,run_time$logit_surv,ylab="Marine survival (logit)",xlab="Seal density")
+abline(lm(logit_surv~seals,data=run_time),lwd=2,col="red")
 
-plot(sh_SR$oceanSalmon,-log(sh_SR$Stock/sh_SR$juvCohort),ylab="Marine mortality (stage-1)",xlab="Pacific salmon biomass")
-abline(lm(-log(sh_SR$Stock/sh_SR$juvCohort)~sh_SR$oceanSalmon),lwd=2,col="red")
+plot(run_time$oceanSalmon,run_time$logit_surv,ylab="Marine survival (logit)",xlab="Pacific salmon biomass")
+abline(lm(logit_surv~oceanSalmon,data=run_time),lwd=2,col="red")
 
-plot(sh_SR$seals,run_time$Mn_Run,xlab="Seal density",ylab="Average run date")
-lines(smooth.spline(sh_SR$seals,run_time$Mn_Run),lwd=2,col="red")
+plot(run_time$logit_surv,run_time$run,xlab="Marine survival (logit)",ylab="Average run date")
+m1 <- lm(run~logit_surv,data=run_time)
+m2 <- nls(run~Asym/(1 + exp((xmid - logit_surv))),data=run_time,start=list(Asym=140,xmid=-4))
+summary(m2)
+AIC(m1,m2)
+curve(coef(m2)["Asym"]/(1 + exp((coef(m2)["xmid"] - x))),add=TRUE,lwd=2,col="red")
 
-plot(run_time$Mn_Run,sh_SR$Recruits,xlab="Average run date",ylab="Smolts")
-lines(smooth.spline(run_time$Mn_Run[!is.na(sh_SR$Recruits)],sh_SR$Recruits[!is.na(sh_SR$Recruits)]),lwd=2,col="red")
+plot(run_time$total_rain_run,run_time$run,xlab="Mean rainfall 14 days before run (mm)",ylab="Average run date")
+lines(smooth.spline(run_time$total_rain_run,run_time$run),lwd=2,col="red")
+
+plot(run_time$run,run_time$Recruits,xlab="Average run date",ylab="Smolts")
+lines(smooth.spline(run_time$run[!is.na(run_time$Recruits)],run_time$Recruits[!is.na(run_time$Recruits)],cv=TRUE),lwd=2,col="red")
+
+plot(run_time$total_rain_egg,run_time$Recruits,xlab="Mean rainfall 30 days after run (mm)",ylab="Smolts")
+lines(smooth.spline(run_time$total_rain_egg[!is.na(run_time$Recruits)],run_time$Recruits[!is.na(run_time$Recruits)],cv=TRUE),lwd=2,col="red")
 
 dev.off()
-#lines(spline(sh_adults$run_year,sh_adults$run_date),lwd=2,col="red")
-names(mn_run) <- unique(sh_adults$run_year)
-run_time <- data.frame("Year"=as.numeric(as.character(names(mn_run))),"Mn_Run"=mn_run)
-run_time <- run_time[order(run_time$Year),]
 
-# create new dataframe repeating number of adults per run date:
-adult_run <- data.frame("Year"=rep(sh_adults$run_year,sh_adults$number),"Run"=rep(sh_adults$run_date,sh_adults$number))
-adult_run <- adult_run[order(adult_run$Year),]
-
-yr_run <- aggregate(Run~Year,data=adult_run,FUN=mean)
-yr_run$sd <- aggregate(Run~Year,data=adult_run,FUN=sd)$Run
-plot(sd~Year,data=yr_run)
-plot(sd~Run,data=yr_run)
-adult_run$Year <- factor(adult_run$Year,levels=rev(unique(sort(adult_run$Year))))
-ggplot(adult_run, aes(x = Run, y=as.factor(Year),fill=..x..)) + 
+yr_run <- aggregate(run~year,data=adult_run,FUN=mean)
+yr_run$sd <- aggregate(run~year,data=adult_run,FUN=function(x){sd(x)/mean(x)})$run
+plot(sd~year,data=yr_run)
+plot(sd~run,data=yr_run)
+adult_run$year <- factor(adult_run$year,levels=rev(unique(sort(adult_run$year))))
+ggplot(adult_run, aes(x = run, y=as.factor(year),fill=..x..)) + 
   geom_density_ridges_gradient(scale=2.5,rel_min_height=1e-3) +
   scale_x_continuous(name="Run date (starting Nov. 15th)",expand=c(0.01,0)) +
   scale_y_discrete(expand=c(0.01,0)) +
@@ -705,4 +767,7 @@ ggplot(adult_run, aes(x = Run, y=as.factor(Year),fill=..x..)) +
   theme(axis.title.y=element_blank()) +
   scale_fill_gradient2(name="Run date",low="blue",high="orange",mid="dodgerblue",midpoint=75)
 
-ggsave(filename="Figures/runtime.jpeg",units="in",height=7,width=6,dpi=800)
+ggsave(filename="Figures/runtime v2.jpeg",units="in",height=7,width=6,dpi=800)
+
+saveRDS(adult_run,"Data/steelhead_run.rds")
+saveRDS(run_time,"Data/steelhead_run_annual.rds")
