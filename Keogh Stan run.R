@@ -12,6 +12,10 @@ library(atsar)
 library(rstan)
 library(rethinking)
 
+options(mc.cores = 4)
+rstan_options(auto_write = TRUE)
+Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
+
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
 sh_annual <- readRDS("Data/steelhead_run_annual.rds")
@@ -24,7 +28,29 @@ keogh_long$prod <- log(keogh_long$Recruits/keogh_long$Stock)
 head(sh_annual)
 
 X <- model.matrix(~-1+Species+Stock:Species+sumRain:Species+sumTemp:Species+winRain:Species+winTemp:Species,data=keogh_long)
-head(X)
 
-trends <- model.matrix(~-1+logitSurv:Species+seals:Species+oceanSalmon:Species+npgo:Species+mei:Species,data=keogh_long)
-head(trends)
+trends <- model.matrix(~-1+logitSurv:Species+seals:Species,data=keogh_long)
+
+Xvars <- c("seals","total_rain_run")
+sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
+mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
+enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
+enviro <- data.frame(enviro)
+sh_trends <- model.matrix(~-1+seals+total_rain_run,data=enviro)
+
+dat <- list("N"=nrow(sh_trends),
+            "K"=ncol(sh_trends),
+            "X"=sh_trends,
+            "lSurv"=sh_annual$logit_surv,
+            "run_time"=sh_annual$run)
+trackPars <- c("beta","pro_devS","pS0","obs_sigma_surv","pro_sigma_surv","obs_sigma_run","bSurv","run0","surv_new","run_new")
+fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=5000,chains=4,control=list("adapt_delta"=0.9))
+fit
+summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.1,0.9))$summary
+mypost <- as.data.frame(fit)
+surv_ppd <- mypost[,grep("surv_new",colnames(mypost))]
+mn_ppd <- apply(surv_ppd,2,mean)
+ci_ppd <- apply(surv_ppd,2,HPDI,prob=0.89)
+plot(exp(dat$lSurv)/(1+exp(dat$lSurv)),mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(ci_ppd), main = "Survival",xlab="Observed survival",ylab="Posterior predictive")
+segments(x0=exp(dat$lSurv)/(1+exp(dat$lSurv)),y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
+abline(b=1,a=0,lwd=2,lty=1,col="red")

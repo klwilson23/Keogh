@@ -713,11 +713,17 @@ adult_run$peak <- unlist(sapply(unique(adult_run$year),function(x){rep(table(adu
 #sh_adults$run_date <- sh_adults$run_date-min(sh_adults$run_date,na.rm=TRUE)
 run_time <- aggregate(cbind(run,size,age,peak,sex,mean_temp_run,max_temp_run,min_temp_run,total_rain_run,mean_temp_egg,total_rain_egg)~year,data=adult_run,FUN=mean,na.rm=TRUE)
 
+run_time$run_f <- aggregate(run~year,data=adult_run[adult_run$sex==1,],FUN=mean,na.rm=TRUE)$run
+run_time$run_m <- aggregate(run~year,data=adult_run[adult_run$sex==0,],FUN=mean,na.rm=TRUE)$run
+
 jpeg("Figures/run date through time.jpeg",width=6,height=5,units="in",res=800)
 layout(1)
 par(mar=c(5,4,1,1))
 plot(run~year,data=adult_run,pch=21,bg="grey80",xlab="Brood year",ylab="Run date (starting Nov. 15th)")
-lines(run_time$year,run_time$run,lwd=3,col="red")
+lines(run_time$year,run_time$run,lwd=3,col="black")
+lines(run_time$year,run_time$run_f,lwd=3,col="orange")
+lines(run_time$year,run_time$run_m,lwd=3,col="dodgerblue")
+
 dev.off()
 
 sh_SR <- keogh_long[keogh_long$Species=="Steelhead" & keogh_long$Year>=1976 & keogh_long$Year<=2017,]
