@@ -51,6 +51,6 @@ mypost <- as.data.frame(fit)
 surv_ppd <- mypost[,grep("surv_new",colnames(mypost))]
 mn_ppd <- apply(surv_ppd,2,mean)
 ci_ppd <- apply(surv_ppd,2,HPDI,prob=0.89)
-plot(exp(dat$lSurv)/(1+exp(dat$lSurv)),mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(ci_ppd), main = "Survival",xlab="Observed survival",ylab="Posterior predictive")
-segments(x0=exp(dat$lSurv)/(1+exp(dat$lSurv)),y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
+plot(1/(1+exp(-dat$lSurv)),mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(ci_ppd), main = "Survival",xlab="Observed survival",ylab="Posterior predictive")
+segments(x0=1/(1+exp(-dat$lSurv)),y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
 abline(b=1,a=0,lwd=2,lty=1,col="red")
