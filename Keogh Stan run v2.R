@@ -13,7 +13,7 @@ library(rstan)
 library(rethinking)
 
 rstan_options(auto_write = TRUE)
-Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
 
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
@@ -50,8 +50,9 @@ dat <- list("N"=nrow(sh_trends),
             "J"=ncol(run_trends),
             "XX"=run_trends,
             "run_time"=sh_annual$run)
-trackPars <- c("beta_surv","pS0","beta_run","run0","sigma_surv","sigma_run","surv_new","run_new")
-fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=2000,chains=4,cores=4,control=list("adapt_delta"=0.8))
+trackPars <- c("beta_surv","pS0","beta_run","run0","ar1_surv","ar1_run","sigma_surv","sigma_run","surv_new","run_new")
+
+fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=2000,chains=2,cores=2,control=list("adapt_delta"=0.8))
 
 summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.025,0.975))$summary
 mypost <- as.data.frame(fit)
@@ -66,7 +67,7 @@ abline(b=1,a=0,lwd=2,lty=1,col="red")
 run_ppd <- mypost[,grep("run_new",colnames(mypost))]
 mn_ppd <- colMeans(run_ppd)
 ci_ppd <- apply(run_ppd,2,HPDI,prob=0.89)
-plot(dat$run_time,mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(dat$run_time), main = "Survival",xlab="Observed survival",ylab="Posterior predictive")
+plot(dat$run_time,mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(dat$run_time), main = "Run time",xlab="Observed run time",ylab="Posterior predictive")
 segments(x0=dat$run_time,y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
 abline(b=1,a=0,lwd=2,lty=1,col="red")
 

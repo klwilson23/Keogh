@@ -15,14 +15,17 @@ parameters {
   real run0;
   real<lower=0> sigma_surv;
   real<lower=0> sigma_run;
+  real<lower=-1, upper=1> ar1_surv;
+  real<lower=-1,upper=1> ar1_run;
 }
 
 transformed parameters{
   vector[N] mnSurv;
   vector[N] mnRun;
-
-  mnSurv = X * beta_surv + pS0;
-  mnRun = XX * beta_run + run0;
+  mnSurv[1] = pS0;
+  mnRun[1] = run0;
+  mnSurv[2:N] = ar1_surv*lSurv[1:(N-1)] + X[2:N] * beta_surv;
+  mnRun[2:N] = ar1_run*run_time[1:(N-1)] + XX[2:N] * beta_run;
 }
 
 model {
@@ -33,8 +36,8 @@ model {
   sigma_surv ~ cauchy(0,50);
   sigma_run ~ cauchy(0,50);
   // regression coefficients
-  beta_surv ~ normal(0,10);
-  beta_run ~ normal(0,10);
+  beta_surv ~ normal(0,1);
+  beta_run ~ normal(0,1);
   // likelihood below
   lSurv ~ normal(mnSurv,sigma_surv);
   run_time ~ normal(mnRun,sigma_run);
