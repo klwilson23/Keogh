@@ -13,7 +13,7 @@ library(rstan)
 library(rethinking)
 
 rstan_options(auto_write = TRUE)
-Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
 
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
@@ -29,22 +29,31 @@ X <- model.matrix(~-1+Species+Stock:Species+sumRain:Species+sumTemp:Species+winR
 
 trends <- model.matrix(~-1+logitSurv:Species+seals:Species,data=keogh_long)
 
-Xvars <- c("seals","oceanSalmon")
+Xvars <- c("seals","npgo")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(enviro)
-sh_trends <- model.matrix(~-1+seals+oceanSalmon,data=enviro)
+sh_trends <- model.matrix(~-1+seals+npgo,data=enviro)
+
+XXvars <- c("total_rain_run","seals")
+sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
+mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
+enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
+enviro_run <- data.frame(enviro_run)
+run_trends <- model.matrix(~-1+total_rain_run+seals,data=enviro_run)
 
 dat <- list("N"=nrow(sh_trends),
             "K"=ncol(sh_trends),
             "X"=sh_trends,
             "lSurv"=sh_annual$logit_surv,
+            "J"=ncol(run_trends),
+            "XX"=run_trends,
             "run_time"=sh_annual$run)
-trackPars <- c("beta","pS0","bSurv","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR","surv_new","run_new")
-fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=2000,chains=4,cores=4,control=list("adapt_delta"=0.9))
+trackPars <- c("beta_surv","beta_run","bSurv","pS0","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR","surv_new","run_new")
+fit <- stan(file = "Stan code/Keogh Surv DLM.stan", pars=trackPars,data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.85))
 
-summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.1,0.9))$summary
+summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.025,0.975))$summary
 mypost <- as.data.frame(fit)
 surv_ppd <- mypost[,grep("surv_new",colnames(mypost))]
 mn_ppd <- apply(surv_ppd,2,mean)
@@ -61,5 +70,7 @@ plot(dat$run_time,mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(ci_ppd
 segments(x0=dat$run_time,y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
 abline(b=1,a=0,lwd=2,lty=1,col="red")
 
-plot(colMeans(run_ppd))
-plot(colMeans(surv_ppd))
+plot(colMeans(run_ppd),type="l")
+plot(colMeans(surv_ppd),type="l")
+
+plot(colMeans(surv_ppd),dat$X[,1])
