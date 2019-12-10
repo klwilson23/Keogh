@@ -25,6 +25,10 @@ keogh_long$marSurv <- keogh_long$Stock/keogh_long$juvCohort
 keogh_long$logitSurv <- log(keogh_long$marSurv/(1-keogh_long$marSurv))
 keogh_long$prod <- log(keogh_long$Recruits/keogh_long$Stock)
 
+plot(sh_annual$year,sh_annual$sex,type="l")
+
+boxplot(run~ifelse(sex>=0.6,"F",ifelse(sex<=0.4,"M","E")),data=sh_annual)
+
 X <- model.matrix(~-1+Species+Stock:Species+sumRain:Species+sumTemp:Species+winRain:Species+winTemp:Species,data=keogh_long)
 
 trends <- model.matrix(~-1+logitSurv:Species+seals:Species,data=keogh_long)
@@ -50,8 +54,8 @@ dat <- list("N"=nrow(sh_trends),
             "J"=ncol(run_trends),
             "XX"=run_trends,
             "run_time"=sh_annual$run)
-trackPars <- c("beta_surv","beta_run","bSurv","pS0","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR","surv_new","run_new")
-fit <- stan(file = "Stan code/Keogh Surv DLM.stan", pars=trackPars,data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.85))
+trackPars <- c("beta_surv","beta_run","bSurv","pS0","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR","surv_new","run_new","mnSurv","mnRun")
+fit <- stan(file = "Stan code/Keogh Surv DLM.stan", pars=trackPars,data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.9))
 
 summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.025,0.975))$summary
 mypost <- as.data.frame(fit)
@@ -70,7 +74,12 @@ plot(dat$run_time,mn_ppd,pch=21,bg="grey50",ylim=range(ci_ppd),xlim=range(ci_ppd
 segments(x0=dat$run_time,y0=ci_ppd[1,],y1=ci_ppd[2,],lwd=1)
 abline(b=1,a=0,lwd=2,lty=1,col="red")
 
+logit_surv <- colMeans(mypost[,grep("mnSurv",colnames(mypost))])
+mn_surv <- exp(logit_surv)/(1+exp(logit_surv))
+
 plot(colMeans(run_ppd),type="l")
 plot(colMeans(surv_ppd),type="l")
+#lines(mn_surv,col="red")
 
-plot(colMeans(surv_ppd),dat$X[,1])
+plot(dat$X[,1],mn_surv,xlab="seal densities",ylab="marine survival (%)")
+
