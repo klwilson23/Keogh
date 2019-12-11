@@ -29,19 +29,21 @@ X <- model.matrix(~-1+Species+Stock:Species+sumRain:Species+sumTemp:Species+winR
 
 trends <- model.matrix(~-1+logitSurv:Species+seals:Species,data=keogh_long)
 
-Xvars <- c("seals","oceanSalmon")
+Xvars <- c("seals","npgo")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(enviro)
-sh_trends <- model.matrix(~-1+seals+oceanSalmon,data=enviro)
+sh_trends <- model.matrix(~-1+seals+npgo,data=enviro)
 
-XXvars <- c("logit_surv","total_rain_run","seals","mean_temp_run","sex")
+XXvars <- c("total_rain_run","mean_temp_run")
 sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
 enviro_run <- data.frame(enviro_run)
-run_trends <- model.matrix(~-1+logit_surv+total_rain_run+seals+mean_temp_run+sex,data=enviro_run)
+run_trends <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
+
+plot(sh_annual$total_rain_run,sh_annual$run)
 
 dat <- list("N"=nrow(sh_trends),
             "K"=ncol(sh_trends),
@@ -50,9 +52,9 @@ dat <- list("N"=nrow(sh_trends),
             "J"=ncol(run_trends),
             "XX"=run_trends,
             "run_time"=sh_annual$run)
-trackPars <- c("beta_surv","pS0","beta_run","run0","ar1_surv","ar1_run","sigma_surv","sigma_run","surv_new","run_new")
+trackPars <- c("beta_surv","pS0","beta_run","run0","sigma_surv","sigma_run","surv_new","run_new")
 
-fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=2000,chains=2,cores=2,control=list("adapt_delta"=0.8))
+fit <- stan(file = "Stan code/Keogh Surv.stan", pars=trackPars,data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.8))
 
 summary(fit, pars=trackPars[!grepl("new",trackPars)],probs=c(0.025,0.975))$summary
 mypost <- as.data.frame(fit)
