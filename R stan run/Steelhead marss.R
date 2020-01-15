@@ -18,6 +18,7 @@ keogh <- readRDS("Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
 sh_annual <- readRDS("Data/steelhead_run_annual.rds")
 sh_annual$time <- 1:length(sh_annual$year)
+sh_annual <- subset(sh_annual,year<=2015 & year>=1976)
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 keogh_long$Species <- factor(keogh_long$Species,levels=unique(keogh_long$Species))
@@ -46,9 +47,31 @@ sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:sc
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
 enviro_prod <- data.frame(XXXvars=enviro_prod)
-colnames(enviro) <- XXXvars
-c3 <- model.matrix(~mean_temp_egg+total_rain_egg,data=enviro_prod)
+colnames(enviro_prod) <- XXXvars
+c3 <- model.matrix(~-1+mean_temp_egg+total_rain_egg,data=enviro_prod)
 
+x3 <- model.matrix(~-1+Stock,data=sh_annual)
+
+dat <- list("N"=nrow(x3),
+            "K"=ncol(x3),
+            "J"=ncol(c3),
+            "c"=c3,
+            "x"=x3,
+            "y"=log(sh_annual$Recruits/sh_annual$Stock),
+            "family"=1,
+            "type"=0)
+
+fit <- stan(file="Stan code/dlm_slope.stan",data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.8))
+
+predictions <- extract(fit)$pred
+plot(colMeans(predictions),ylim=range(predictions))
+points(dat$y,pch=21,bg="orange")
+
+bs <- extract(fit)$beta
+plot(colMeans(bs[,,1]))
+plot(colMeans(bs[,,2]))
+
+# all models
 dat <- list("N"=nrow(x1),
             "K"=ncol(x1),
             "J"=ncol(x2),
