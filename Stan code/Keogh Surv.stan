@@ -48,8 +48,8 @@ model {
   if(K>1) beta_surv[2:K] ~ normal(0,5);
   if(J>1) beta_run[2:J] ~ normal(0,5);
   // variances for process error
-  sigma_surv ~ cauchy(0,5);
-  sigma_run ~ cauchy(0,25);
+  sigma_surv ~ cauchy(0,sd(lSurv));
+  sigma_run ~ cauchy(0,sd(run_time));
   // likelihood below
   lSurv ~ normal(mnSurv,sigma_cor_surv);
   run_time ~ normal(mnRun,sigma_cor_run);

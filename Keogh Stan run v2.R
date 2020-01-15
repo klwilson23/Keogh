@@ -11,7 +11,8 @@ library(loo)
 library(rethinking)
 
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
+#options(mc.cores = parallel::detectCores(logical=FALSE))
+#Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
 
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
@@ -24,27 +25,21 @@ keogh_long$marSurv <- keogh_long$Stock/keogh_long$juvCohort
 keogh_long$logitSurv <- log(keogh_long$marSurv/(1-keogh_long$marSurv))
 keogh_long$prod <- log(keogh_long$Recruits/keogh_long$Stock)
 
-X <- model.matrix(~Species+Stock:Species+sumRain:Species+sumTemp:Species+winRain:Species+winTemp:Species,data=keogh_long)
-
-trends <- model.matrix(~logitSurv:Species+seals:Species,data=keogh_long)
-
-Xvars <- c("seals","npgo","mei","oceanSalmon")
+Xvars <- c("seals","npgo")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(Xvars=enviro)
 colnames(enviro) <- Xvars
-sh_trends <- model.matrix(~seals+npgo+mei+oceanSalmon,data=enviro)
+sh_trends <- model.matrix(~seals+npgo,data=enviro)
 
-XXvars <- c("total_rain_run","mean_temp_run","sex")
+XXvars <- c("total_rain_run","mean_temp_run")
 sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
 enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
-run_trends <- model.matrix(~total_rain_run+mean_temp_run+sex,data=enviro_run)
-
-plot(sh_annual$total_rain_run,sh_annual$run)
+run_trends <- model.matrix(~total_rain_run+mean_temp_run,data=enviro_run)
 
 dat <- list("N"=nrow(sh_trends),
             "K"=ncol(sh_trends),
@@ -54,9 +49,35 @@ dat <- list("N"=nrow(sh_trends),
             "XX"=run_trends,
             "run_time"=sh_annual$run)
 
-fit <- stan(file = "Stan code/Keogh Surv.stan", data=dat, iter=5000,chains=1,cores=1,control=list("adapt_delta"=0.8))
-
+fit <- stan(file = "Stan code/Keogh Surv.stan", data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.8))
 summary(fit, pars=c("beta_surv","beta_run","sigma_surv","sigma_run","phi_surv","phi_run"),probs=c(0.025,0.975))$summary
+
+Xvars <- c("seals","npgo")
+sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
+mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
+enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
+enviro <- data.frame(enviro)
+sh_trends <- model.matrix(~-1+seals+npgo,data=enviro)
+
+XXvars <- c("total_rain_run","mean_temp_run")
+sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
+mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
+enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
+enviro_run <- data.frame(enviro_run)
+run_trends <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
+
+datNew <- list("N"=nrow(sh_trends),
+               "K"=ncol(sh_trends),
+               "X"=sh_trends,
+               "lSurv"=sh_annual$logit_surv,
+               "J"=ncol(run_trends),
+               "XX"=run_trends,
+               "run_time"=sh_annual$run)
+trackPars <- c("beta_surv","beta_run","bSurv","pS0","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR","surv_new","run_new","mnSurv","mnRun","log_lik1","log_lik2")
+fit2 <- stan(file = "Stan code/Keogh Surv DLM.stan", data=datNew,pars=trackPars, iter=5000,chains=4,cores=1,control=list("adapt_delta"=0.9))
+
+summary(fit2, pars=c("beta_surv","beta_run","bSurv","pS0","run0","obs_sigma_surv","obs_sigma_run","pro_sigma_surv","pro_sigma_run","pro_devS","pro_devR"),probs=c(0.1,0.9))$summary
+
 mypost <- as.data.frame(fit)
 surv_ppd <- extract(fit)$surv_new
 mn_ppd <- colMeans(surv_ppd)
@@ -82,6 +103,7 @@ surv_ci <- apply(extract(fit)$surv_new,2,HPDI,prob=0.95)
 plot(colMeans(extract(fit)$surv_new),ylim=range(surv_ci),lwd=2,type="l")
 polygon(x=c(1:nrow(dat$X),rev(1:nrow(dat$X))),y=c(surv_ci[1,],rev(surv_ci[2,])),col=adjustcolor("grey",0.5))
 lines(colMeans(extract(fit)$surv_new),lwd=2)
+points(sh_annual$Stock/sh_annual$juvCohort,pch=21,bg="red")
 
 # seals:
 surv_ppd <- extract(fit)$surv_new[,order(sh_annual$seals)]
@@ -92,4 +114,6 @@ lines(sort(sh_annual$seals),colMeans(surv_ppd),lwd=2)
 
 plot(sh_annual$seals,colMeans(extract(fit)$surv_new))
 plot(sh_annual$total_rain_run,colMeans(extract(fit)$run_new))
-loo(extract_log_lik(fit,parameter_name = c("log_lik1","log_lik2")),cores=1)
+loo_1 <- loo(extract_log_lik(fit,parameter_name = c("log_lik1","log_lik2")),cores=1)
+loo_2 <- loo(extract_log_lik(fit2,parameter_name = c("log_lik1","log_lik2")),cores=1)
+loo_compare(loo_1,loo_2)

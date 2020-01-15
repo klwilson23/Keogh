@@ -6,13 +6,12 @@ library(ggplot2)
 library(MARSS)
 library(broom)
 library(wesanderson)
-library(devtools)
-#devtools::install_github("nwfsc-timeseries/atsar")
-library(atsar)
 library(rstan)
+library(loo)
 library(rethinking)
 
 rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 #Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
 
 keogh <- readRDS("Keogh_newJuv_enviro.rds")
@@ -40,12 +39,12 @@ enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(enviro)
 sh_trends <- model.matrix(~-1+seals+npgo,data=enviro)
 
-XXvars <- c("total_rain_run","seals")
+XXvars <- c("total_rain_run","mean_temp_run")
 sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
 enviro_run <- data.frame(enviro_run)
-run_trends <- model.matrix(~-1+total_rain_run+seals,data=enviro_run)
+run_trends <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
 dat <- list("N"=nrow(sh_trends),
             "K"=ncol(sh_trends),

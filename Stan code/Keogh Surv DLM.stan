@@ -61,6 +61,8 @@ model {
 }
 
 generated quantities {
+  vector[N] log_lik1;
+  vector[N] log_lik2;
   vector[N] lsurv_new;
   vector[N] surv_new;
   vector[N] run_new;
@@ -68,5 +70,7 @@ generated quantities {
     lsurv_new[i] = normal_rng(obSurv[i],obs_sigma_surv);
     surv_new[i] = inv_logit(lsurv_new[i]);
     run_new[i] = normal_rng(obRun[i],obs_sigma_run);
+    log_lik1[i] = normal_lpdf(lSurv[i] | obSurv[i],obs_sigma_surv);
+    log_lik2[i] = normal_lpdf(run_time[i] | obRun[i],obs_sigma_run);
   }
 }
