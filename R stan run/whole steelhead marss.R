@@ -36,7 +36,7 @@ mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:cent
 enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
 enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
-x2 <- model.matrix(~-1+total_rain_run+mean_temp_run+log_adults,data=enviro_run)
+x2 <- model.matrix(~-1+total_rain_run+log_adults,data=enviro_run)
 
 XXXvars <- c("mean_temp_egg", "total_rain_egg")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")

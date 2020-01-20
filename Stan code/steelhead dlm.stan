@@ -112,7 +112,10 @@ model {
   
   // likelihood below
   y1 ~ normal(pred_surv,sigma_surv_obs);
-  x3 ~ normal(pred_adults,sigma_adult_obs) T[0,];
+  for(i in 1:N)
+  {
+    x3[i] ~ normal(pred_adults[i],sigma_adult_obs) T[0,];
+  }
   y2 ~ normal(pred_run,sigma_run_obs);
   y3 ~ normal(pred_rec, sigma_rec_obs);
 }
@@ -129,11 +132,11 @@ generated quantities {
   vector[N] R;
   for(i in 1:N) {
     log_lik1[i] = normal_lpdf(y1[i] | pred_surv[i],sigma_surv_obs);
-    log_lik2[i] = lognormal_lpdf(x3[i] | pred_adults[i],sigma_adult_obs);
+    log_lik2[i] = normal_lpdf(x3[i] | pred_adults[i],sigma_adult_obs);
     log_lik3[i] = normal_lpdf(y2[i] | pred_run[i],sigma_run_obs);
     log_lik4[i] = normal_lpdf(y3[i] | pred_rec[i], sigma_rec_obs);
     y1_ppd[i] = inv_logit(normal_rng(pred_surv[i],sigma_surv_obs));
-    x3_ppd[i] = lognormal_rng(pred_adults[i],sigma_adult_obs);
+    x3_ppd[i] = normal_rng(pred_adults[i],sigma_adult_obs);
     y2_ppd[i] = normal_rng(pred_run[i],sigma_run_obs);
     y3_ppd[i] = normal_rng(pred_rec[i], sigma_rec_obs);
     R[i] = exp(x0[i])*x3[i]*exp(beta_rec*x3[i]);
