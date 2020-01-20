@@ -6,8 +6,8 @@ data {
 }
 
 parameters {
-  real<lower=0> x0;
-  vector<upper=0>[N] beta;
+  vector<lower=0>[N] x0;
+  real<upper=0> beta;
   real<lower=0> sigma_process;
   real<lower=0> sigma_obs;
 }
@@ -16,16 +16,16 @@ transformed parameters {
   vector[N] pred;
   for(i in 1:N)
   {
-    pred[i] = x[i]*beta[i] + x0;
+    pred[i] = x[i]*beta + x0[i];
   }
 }
 
 model {
-  x0 ~ normal(mean(y),1);
-  beta[1] ~ normal(-2e-3,sigma_process);
+  beta ~ normal(-2e-3,1);
+  x0[1] ~ normal(mean(y),sigma_process);
   for(i in 2:N)
   {
-    beta[i] ~ normal(beta[i-1],sigma_process);
+    x0[i] ~ normal(x0[i-1],sigma_process);
   }
   sigma_process ~ cauchy(0,5);
   sigma_obs ~ cauchy(0,10);
@@ -48,7 +48,7 @@ generated quantities {
     for(i in 1:N) {
       log_lik[i] = normal_lpdf(y[i] | pred[i], sigma_obs);
       y_ppd[i] = normal_rng(pred[i], sigma_obs);
-      R[i] = exp(x0)*x[i]*exp(beta[i]*x[i]);
+      R[i] = exp(x0[i])*x[i]*exp(beta*x[i]);
     } 
   }
   if(family==2)
@@ -56,7 +56,7 @@ generated quantities {
     for(i in 1:N) {
       log_lik[i] = lognormal_lpdf(y[i] | pred[i], sigma_obs);
       y_ppd[i] = lognormal_rng(pred[i], sigma_obs);
-      R[i] = exp(x0)*x[i]*exp(beta[i]*x[i]);
+      R[i] = exp(x0[i])*x[i]*exp(beta*x[i]);
     } 
   }
 }
