@@ -80,7 +80,7 @@ model {
   sigma_surv_obs ~ cauchy(0,5);
 
   // trend in steelhead adults
-  beta_adults ~ normal(0,5);
+  beta_adults ~ normal(0,10);
   a0[1] ~ normal(mean(x3),sigma_adult_pro);
   for(i in 2:N)
   {
@@ -90,7 +90,7 @@ model {
   sigma_adult_pro ~ cauchy(0,100);
   
   // trend in adult run time
-  beta_run ~ normal(0,5);
+  beta_run ~ normal(0,10);
   r0[1] ~ normal(mean(y2),sigma_run_pro);
   for(i in 2:N)
   {
@@ -112,7 +112,7 @@ model {
   
   // likelihood below
   y1 ~ normal(pred_surv,sigma_surv_obs);
-  x3 ~ lognormal(pred_adults,sigma_adult_obs);
+  x3 ~ normal(pred_adults,sigma_adult_obs) T[0,];
   y2 ~ normal(pred_run,sigma_run_obs);
   y3 ~ normal(pred_rec, sigma_rec_obs);
 }
