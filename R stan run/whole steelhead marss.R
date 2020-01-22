@@ -30,13 +30,13 @@ enviro <- data.frame(Xvars=enviro)
 colnames(enviro) <- Xvars
 x1 <- model.matrix(~-1+seals+npgo+oceanSalmon,data=enviro)
 
-XXvars <- c("total_rain_run","log_adults")
+XXvars <- c("total_rain_run","mean_temp_run")
 sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_run <- scale(sh_annual[,XXvars],center=TRUE,scale=TRUE)
 enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
-x2 <- model.matrix(~-1+total_rain_run+log_adults,data=enviro_run)
+x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
 XXXvars <- c("mean_temp_egg", "total_rain_egg")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
@@ -68,7 +68,9 @@ saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh steelhe
 
 summary(fit,pars=c("y1_miss","beta_surv","beta_adults","beta_run","beta_rec","beta_rec_cov"),probs=c(0.025,0.975))$summary
 
-summary(fit,pars=c("s0","a0","r0","x0","sigma_surv_pro","sigma_surv_obs","sigma_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
+summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","cv_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
+
+summary(fit,pars=c("s0","a0","r0","x0"),probs=c(0.025,0.975))$summary
 
 #pairs(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_run_pro","sigma_run_obs","sigma_rec_process","sigma_rec_obs"))
 # survival
@@ -154,7 +156,7 @@ points(dat$y2,pch=21,bg="orange")
 r0 <- extract(fit)$r0
 betas <- extract(fit)$beta_run
 surv_seq <- seq(from=-2,to=2,length.out=25)
-ppd <- sapply(1:nrow(betas),function(x){betas[x,3] * surv_seq})
+ppd <- sapply(1:nrow(betas),function(x){betas[x,2] * surv_seq})
 ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
 plot(surv_seq,rowMeans(ppd),xlab="",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n",yaxt="n")
 axis(1,line=0)
@@ -237,7 +239,7 @@ points(colMeans(ppx),colMeans(ppy),pch=21,bg="dodgerblue")
 
 # run timing and adult N
 ppy <- extract(fit)$pred_run
-ppx <- dat$x2[,3]
+ppx <- dat$x2[,2]
 ciy <- apply(ppy,2,quantile,probs=c(0.05,0.95))
 plot(ppx,colMeans(ppy),ylim=range(ciy),pch=21,bg="dodgerblue")
 segments(x0=ppx,y0=ciy[1,],y1=ciy[2,],lwd=0.75)

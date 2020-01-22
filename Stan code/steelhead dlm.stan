@@ -1,3 +1,13 @@
+functions {
+  real normal_lb_ub_rng(real mu, real sigma, real lb, real ub) 
+  {
+    real p1 = normal_cdf(lb, mu, sigma);  // cdf with lower bound
+    real p2 = normal_cdf(ub, mu, sigma);  // cdf with upper bound
+    real u = uniform_rng(p1, p2);
+    return (sigma * inv_Phi(u)) + mu;  // inverse cdf 
+  }
+}
+
 data {
   int<lower=0> N;
   int<lower=0> N_obs;
@@ -17,7 +27,7 @@ data {
 parameters {
   
   vector[K] beta_surv;
-  vector[J] beta_run;
+  vector[J+1] beta_run;
   real beta_adults;
   
   real<lower=0> sigma_surv_obs;
@@ -59,7 +69,7 @@ transformed parameters {
   
   for(i in 1:N)
   {
-    pred_run[i] = r0[i] + x2[i] * beta_run;
+    pred_run[i] = r0[i] + log(x3[i]) * beta_run[1] + x2[i] * beta_run[2:(J+1)];
   }
   for(i in 1:N)
   {
@@ -80,7 +90,7 @@ model {
   sigma_surv_obs ~ cauchy(0,5);
 
   // trend in steelhead adults
-  beta_adults ~ normal(0,10);
+  beta_adults ~ normal(0,15);
   a0[1] ~ normal(mean(x3),sigma_adult_pro);
   for(i in 2:N)
   {
@@ -90,14 +100,14 @@ model {
   sigma_adult_pro ~ cauchy(0,100);
   
   // trend in adult run time
-  beta_run ~ normal(0,10);
+  beta_run ~ normal(0,15);
   r0[1] ~ normal(mean(y2),sigma_run_pro);
   for(i in 2:N)
   {
     r0[i] ~ normal(r0[i-1],sigma_run_pro);
   }
-  sigma_run_pro ~ cauchy(0,25);
-  sigma_run_obs ~ cauchy(0,25);
+  sigma_run_pro ~ cauchy(0,50);
+  sigma_run_obs ~ cauchy(0,50);
 
   // trend in productivity
   beta_rec ~ normal(-2e-3,1);
@@ -136,7 +146,7 @@ generated quantities {
     log_lik3[i] = normal_lpdf(y2[i] | pred_run[i],sigma_run_obs);
     log_lik4[i] = normal_lpdf(y3[i] | pred_rec[i], sigma_rec_obs);
     y1_ppd[i] = inv_logit(normal_rng(pred_surv[i],sigma_surv_obs));
-    x3_ppd[i] = normal_rng(pred_adults[i],sigma_adult_obs);
+    x3_ppd[i] = normal_lb_ub_rng(pred_adults[i],sigma_adult_obs,0,1e6);
     y2_ppd[i] = normal_rng(pred_run[i],sigma_run_obs);
     y3_ppd[i] = normal_rng(pred_rec[i], sigma_rec_obs);
     R[i] = exp(x0[i])*x3[i]*exp(beta_rec*x3[i]);
