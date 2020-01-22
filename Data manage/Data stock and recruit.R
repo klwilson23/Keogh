@@ -21,7 +21,7 @@ portHardy_pg$max_temp_run <- roll_mean(portHardy_pg$max_temp,duration)
 portHardy_pg$min_temp_run <- roll_mean(portHardy_pg$min_temp,duration)
 portHardy_pg$total_rain_run <- roll_mean(portHardy_pg$total_rain,duration)
 
-incubation <- 30
+incubation <- 30 # how many days after the adult run are eggs laid
 portHardy_pg$total_rain_egg <- roll_mean_forward(portHardy_pg$total_rain,incubation)
 portHardy_pg$mean_temp_egg <- roll_mean_forward(portHardy_pg$mean_temp,incubation)
 
