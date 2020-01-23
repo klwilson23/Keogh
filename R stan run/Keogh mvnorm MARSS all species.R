@@ -29,18 +29,35 @@ x <- as.matrix(keogh_wide[,grep("Stock",colnames(keogh_wide))])
 y <- as.matrix(keogh_wide[,grep("prod",colnames(keogh_wide))])
 y[which(is.na(y),arr.ind=TRUE)] <- colMeans(y[1:10,],na.rm=TRUE)[which(is.na(y),arr.ind=TRUE)[,2]]
 
+xx1 <- scale(model.matrix(~-1+seal_densities+npgo+mean_temp+tot_rain,data=keogh_long[keogh_long$Species=="Steelhead",]),centered=TRUE,scale=TRUE)
+xx2 <- scale(model.matrix(~-1+seal_densities+npgo+mean_temp+tot_rain,data=keogh_long[keogh_long$Species=="Dolly Varden",]),centered=TRUE,scale=TRUE)
+xx3 <- scale(model.matrix(~-1+seal_densities+npgo+mean_temp+tot_rain,data=keogh_long[keogh_long$Species=="Cutthroat",]),centered=TRUE,scale=TRUE)
+xx4 <- scale(model.matrix(~-1+seal_densities+npgo+mean_temp+tot_rain,data=keogh_long[keogh_long$Species=="Pink",]),centered=TRUE,scale=TRUE)
+xx5 <- scale(model.matrix(~-1+seal_densities+npgo+mean_temp+tot_rain,data=keogh_long[keogh_long$Species=="Coho",]),centered=TRUE,scale=TRUE)
+
+
 # all models
 dat <- list("N"=nrow(x),
             "K"=ncol(x),
             "x"=x,
             "y"=y,
-            "init_priors"=rep(-2e-3,ncol(x)))
+            "init_priors"=rep(-2e-3,ncol(x)),
+            "J1"=nrow(xx1),
+            "J2"=nrow(xx2),
+            "J3"=nrow(xx3),
+            "J4"=nrow(xx4),
+            "J5"=nrow(xx5),
+            "xx1"=xx1,
+            "xx2"=xx2,
+            "xx3"=xx3,
+            "xx4"=xx4,
+            "xx5"=xx5)
 
 fit <- stan(file="Stan code/Keogh mnorm MARSS.stan",data=dat, iter=5000,chains=6,cores=6,control=list("adapt_delta"=0.9))
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm.rds")
 
-summary(fit,pars=c("beta","x0","L_Omega_obs","L_sigma_obs","L_Omega_proc","L_sigma_proc","sigma_proc"),probs=c(0.025,0.975))$summary
+summary(fit,pars=c("beta","beta_steel","beta_dolly","beta_cutt","beta_pink","beta_coho","x0","L_Omega_obs","L_sigma_obs","L_Omega_proc","L_sigma_proc","sigma_proc"),probs=c(0.025,0.975))$summary
 
 pro_corr <- extract(fit)$Omega_proc
 pro_corr_mn <- apply(pro_corr,c(3,2),mean)

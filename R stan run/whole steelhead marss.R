@@ -62,19 +62,19 @@ dat <- list("N"=nrow(x1),
             "xx3"=xx3,
             "init_s0"=mean(sh_annual$logit_surv[1:10],na.rm=TRUE))
 
-fit <- stan(file="Stan code/steelhead dlm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=2000,chains=4,cores=4,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh steelhead.rds")
 
 summary(fit,pars=c("y1_miss","beta_surv","beta_adults","beta_run","beta_rec","beta_rec_cov"),probs=c(0.025,0.975))$summary
 
-summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","cv_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
+summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
 
 summary(fit,pars=c("s0","a0","r0","x0"),probs=c(0.025,0.975))$summary
 
 #pairs(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_run_pro","sigma_run_obs","sigma_rec_process","sigma_rec_obs"))
 # survival
-jpeg("Figures/Steelhead cycle marss.jpeg",res=800,height=7,width=8,units="in")
+jpeg(paste("Figures/Steelhead cycle marss ",Sys.Date(),".jpeg",sep=""),res=800,height=7,width=8,units="in")
 regime <- which(sh_annual==1991)
 matLayout <- matrix(0,nrow=15,ncol=15)
 matLayout[1:3,1:11] <- 1
