@@ -62,13 +62,18 @@ dat <- list("N"=nrow(x1),
             "xx3"=xx3,
             "init_s0"=mean(sh_annual$logit_surv[1:10],na.rm=TRUE))
 
-fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=2000,chains=4,cores=4,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+fit <- stan(file="Stan code/steelhead dlm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+fit2 <- stan(file="Stan code/steelhead dlm cv.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+fit3 <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+
+loo_compare(loo(extract_log_lik(fit,parameter_name = c("log_lik1","log_lik2","log_lik3","log_lik4"))),loo(extract_log_lik(fit2,parameter_name = c("log_lik1","log_lik2","log_lik3","log_lik4"))),loo(extract_log_lik(fit3,parameter_name = c("log_lik1","log_lik2","log_lik3","log_lik4"))))
+
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh steelhead.rds")
 
-summary(fit,pars=c("y1_miss","beta_surv","beta_adults","beta_run","beta_rec","beta_rec_cov"),probs=c(0.025,0.975))$summary
+summary(fit3,pars=c("y1_miss","beta_surv","beta_adults","beta_run","beta_rec","beta_rec_cov"),probs=c(0.025,0.975))$summary
 
-summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
+summary(fit3,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
 
 summary(fit,pars=c("s0","a0","r0","x0"),probs=c(0.025,0.975))$summary
 
@@ -282,9 +287,9 @@ points(ppx,colMeans(ppy),pch=21,bg="dodgerblue")
 # posterior frequencies for coefficients
 betas <- extract(fit)$beta_surv
 colSums(betas>0)/nrow(betas)
+betas <- extract(fit)$beta_adult
+sum(betas>0)/length(betas)
 betas <- extract(fit)$beta_run
 colSums(betas>0)/nrow(betas)
-betas <- extract(fit)$beta_run_cov
-sum(betas>0)/length(betas)
 betas <- extract(fit)$beta_rec_cov
 colSums(betas>0)/nrow(betas)
