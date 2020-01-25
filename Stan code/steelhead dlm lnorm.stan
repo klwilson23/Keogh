@@ -96,8 +96,8 @@ model {
   {
     a0[i] ~ normal(a0[i-1],sigma_adult_pro);
   }
-  sigma_adult_obs ~ cauchy(0,1);
-  sigma_adult_pro ~ cauchy(0,30);
+  sigma_adult_obs ~ cauchy(0,0.5);
+  sigma_adult_pro ~ cauchy(0,15);
   
   // trend in adult run time
   beta_run ~ normal(0,15);
