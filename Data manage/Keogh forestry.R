@@ -29,7 +29,6 @@ log_max <- extract(imported_raster,             # raster layer
                    fun=median,         # what to value to extract
                    df=TRUE)         # return a dataframe? 
 log_max
-?extract
 
 str_name<-'~/Google Drive/SFU postdoc/Keogh river/BC_disturbance/logging_ageclass2012/logging_year.tif' 
 
@@ -50,7 +49,7 @@ lu <- spPolygons( rbind(c(-180,-20), c(-160,5), c(-60, 0),
                         c(-160,-60), c(-180,-20)),rbind(c(80,0), 
                                                         c(100,60), c(120,0), c(120,-55), c(80,0)))
 lu <- SpatialPolygonsDataFrame(lu, data.frame(class=c("urban","ag")))
-
+?reclassify
 raster::subset(log_year,log_year@data@attributes[[1]]$ID==log_max[1])
 ext <- extent(spKeogh)
 ext@xmin <- ext@xmin-1.5e4
@@ -61,8 +60,13 @@ new_rast <- crop(log_year,ext)
 plot(new_rast)
 points(spKeogh,pch=21,cex=2)
 
-forestry <- data.frame("Year"=as.numeric(names(table(new_rast@data@values))),"Logging"=as.numeric(table(new_rast@data@values)))
-running_sum
-forestry$cumul_log <- cumsum(forestry$Logging)
+years <- 1752:2017
+
+logging_hist <- table(new_rast@data@values)
+forestry <- data.frame("Year"=years,"Logging"=as.numeric(logging_hist[match(years,names(logging_hist))]))
+forestry$Logging[is.na(forestry$Logging)] <- 0
+lag <- 10
+forestry$cumul_log <- c(rep(0,lag),sapply((lag+1):nrow(forestry),function(x){sum(forestry$Logging[(x-lag):x])}))
+
 plot(forestry$Year,forestry$cumul_log,type="l",lwd=2,xlab="Year",ylab="Cumulative stands logged near mouth of Keogh River")
 abline(v=1991,lwd=2,lty=2,col="red")
