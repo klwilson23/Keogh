@@ -47,7 +47,7 @@ for(i in 1:length(covarNames))
     Z[upper.tri(Z)] <- 0
     A <- "unequal"
     mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
-    
+    m <- apply(covars, 1, mean, na.rm=TRUE)
     fit.dfa <- MARSS(covars, model = mod.list.dfa, control = list(maxit = 50000), inits = list(A = matrix(m, ns, 1)))
     
     d <- augment(fit.dfa, interval = "confidence")
@@ -85,7 +85,7 @@ range(enviroNew[,grep("fresh",colnames(enviroNew))])
 reEnviro <- reshape(enviroNew,direction="long",idvar="Year",timevar="Species")
 colnames(reEnviro) <- colnames(environment)
 
-keogh_SR <- subset(keogh_long,select = c(Year,Species,Stock,Recruits,juvCohort))
+keogh_SR <- subset(keogh_long,select = c(Year,Species,Stock,Recruits,juvCohort,Logging,cumul_log,cumul_footprint))
 keogh_new <- data.frame(keogh_SR,reEnviro[,!colnames(reEnviro) %in% c("Year","Species")])
 
 saveRDS(keogh_new,file="Keogh_SR_enviro_new.rds")

@@ -4,24 +4,9 @@ data {
   vector[K] x[N];
   vector[K] y[N]; 
   vector[K] init_priors;
-  int<lower=0> J1;
-  matrix[N,J1] xx1;
-  int<lower=0> J2;
-  matrix[N,J2] xx2;
-  int<lower=0> J3;
-  matrix[N,J3] xx3;
-  int<lower=0> J4;
-  matrix[N,J4] xx4;
-  int<lower=0> J5;
-  matrix[N,J5] xx5;
 }
 
 parameters {
-  vector[J1] beta_steel;
-  vector[J2] beta_dolly;
-  vector[J3] beta_cutt;
-  vector[J4] beta_pink;
-  vector[J5] beta_coho;
   vector<upper=0>[K] beta;
   vector[K] x0[N];
   cholesky_factor_corr[K] L_Omega_obs;
@@ -36,36 +21,12 @@ transformed parameters{
   {
     for(k in 1:K)
     {
-      if(k==1)
-      {
-        mu[n,k] = x[n,k]*beta[k] + x0[n,k] + xx1[n] * beta_steel;
-      }
-      if(k==2)
-      {
-        mu[n,k] = x[n,k]*beta[k] + x0[n,k] + xx2[n] * beta_dolly;
-      }
-      if(k==3)
-      {
-        mu[n,k] = x[n,k]*beta[k] + x0[n,k] + xx3[n] * beta_cutt;
-      }
-      if(k==4)
-      {
-        mu[n,k] = x[n,k]*beta[k] + x0[n,k] + xx4[n] * beta_pink;
-      }
-      if(k==5)
-      {
-        mu[n,k] = x[n,k]*beta[k] + x0[n,k] + xx5[n] * beta_coho;
-      }
+      mu[n,k] = x[n,k]*beta[k] + x0[n,k];
     }
   }
 }
 
 model {
-  beta_steel ~ normal(0,1);
-  beta_dolly ~ normal(0,1);
-  beta_cutt ~ normal(0,1);
-  beta_pink ~ normal(0,1);
-  beta_coho ~ normal(0,1);
   beta ~ normal(-2e-3, 1);
   L_Omega_obs ~ lkj_corr_cholesky(1); 
   L_sigma_obs ~ student_t(3, 0, 2);
@@ -96,7 +57,7 @@ generated quantities {
     y_ppd[i] = multi_normal_cholesky_rng(mu[i],diag_pre_multiply(L_sigma_obs, L_Omega_obs));
     for(k in 1:K)
     {
-      R[i,k] = exp(y_ppd[i,k])*x[i,k];
+      R[i,k] = exp(x0[i,k])*x[i,k]*exp(beta[k]*x[i,k]);
     }
   }
 }

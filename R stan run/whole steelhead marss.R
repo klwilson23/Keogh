@@ -14,7 +14,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores(logical=FALSE))
 Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7')
 
-keogh <- readRDS("Keogh_newJuv_enviro.rds")
+keogh <- readRDS("Keogh_newRec_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
 sh_annual <- readRDS("Data/steelhead_run_annual.rds")
 sh_annual$time <- 1:length(sh_annual$year)
@@ -22,6 +22,7 @@ sh_annual <- subset(sh_annual,year<=2015 & year>=1976)
 sh_annual$logit_surv[1] <- NA
 
 sh_annual$log_adults <- log(sh_annual$Stock)
+
 Xvars <- c("seals","npgo","oceanSalmon")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
@@ -38,13 +39,13 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("mean_temp_egg", "total_rain_egg")
+XXXvars <- c("mean_temp_egg", "total_rain_egg","cumul_log")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
 enviro_prod <- data.frame(XXXvars=enviro_prod)
 colnames(enviro_prod) <- XXXvars
-xx3 <- model.matrix(~-1+mean_temp_egg+total_rain_egg,data=enviro_prod)
+xx3 <- model.matrix(~-1+mean_temp_egg+total_rain_egg+cumul_log,data=enviro_prod)
 x3 <- model.matrix(~-1+Stock,data=sh_annual)
 
 # all models
@@ -62,7 +63,7 @@ dat <- list("N"=nrow(x1),
             "xx3"=xx3,
             "init_s0"=mean(sh_annual$logit_surv[1:10],na.rm=TRUE))
 
-fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=2000,chains=4,cores=4,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 #fit2 <- stan(file="Stan code/steelhead dlm cv.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 #fit3 <- stan(file="Stan code/steelhead dlm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 

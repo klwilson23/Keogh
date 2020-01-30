@@ -146,6 +146,6 @@ generated quantities {
     x3_ppd[i] = lognormal_rng(log(pred_adults[i]),sigma_adult_obs);
     y2_ppd[i] = normal_rng(pred_run[i],sigma_run_obs);
     y3_ppd[i] = normal_rng(pred_rec[i], sigma_rec_obs);
-    R[i] = exp(x0[i])*x3[i]*exp(beta_rec*x3[i]);
+    R[i] = exp(pred_rec[i])*x3_ppd[i];
   }
 }

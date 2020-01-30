@@ -39,6 +39,8 @@ log_year@crs
 proj4string(log_year) <- CRS("+init=EPSG:3005")
 layout(1)
 plot(log_year)
+points(spKeogh,pch=21,cex=2,bg="tomato")
+
 log_max <- extract(log_year,             # raster layer
                    spKeogh,   # SPDF with centroids for buffer
                    buffer = 40000,     # buffer size, units depend on CRS
@@ -58,15 +60,27 @@ ext@ymin <- ext@ymin-4e4
 ext@ymax <- ext@ymax+1000
 new_rast <- crop(log_year,ext)
 plot(new_rast)
-points(spKeogh,pch=21,cex=2)
+points(spKeogh,pch=21,cex=2,bg="tomato")
 
+
+xscale <- (extent(log_year)@xmax-extent(log_year)@xmin)/log_year@ncols # meters per pixel
+yscale <- (extent(log_year)@ymax-extent(log_year)@ymin)/log_year@nrows # meters per pixel
 years <- 1752:2017
 
-logging_hist <- table(new_rast@data@values)
+logging_hist <- table(new_rast@data@values)*xscale
+sum_tot <- sum(logging_hist)
 forestry <- data.frame("Year"=years,"Logging"=as.numeric(logging_hist[match(years,names(logging_hist))]))
 forestry$Logging[is.na(forestry$Logging)] <- 0
 lag <- 10
 forestry$cumul_log <- c(rep(0,lag),sapply((lag+1):nrow(forestry),function(x){sum(forestry$Logging[(x-lag):x])}))
 
-plot(forestry$Year,forestry$cumul_log,type="l",lwd=2,xlab="Year",ylab="Cumulative stands logged near mouth of Keogh River")
+forestry$cumul_footprint <- cumsum(forestry$Logging)
+
+layout(matrix(1:2,ncol=2))
+par(mar=c(5,4,1,1))
+plot(forestry$Year,forestry$cumul_log,type="l",lwd=2,xlab="Year",ylab="10-year moving window logged area (m2)")
 abline(v=1991,lwd=2,lty=2,col="red")
+plot(forestry$Year,forestry$cumul_footprint,type="l",lwd=2,xlab="Year",ylab="Cumulative logged area (m2)")
+abline(v=1991,lwd=2,lty=2,col="red")
+
+saveRDS(forestry,file="Data/keogh_logging.rds")

@@ -31,7 +31,7 @@ x0 <- "unequal"
 mod.list.ar1 = list(B = B, Q = Q, R = R, U = U, x0 = x0, A = A, tinitx = 1)
 
 # DFA model
-nTrends <- 1
+nTrends <- 2
 B <- matrix(list(0), nTrends, nTrends)
 diag(B) <- paste("b",1:nTrends,sep="")
 Q <- diag(1, nTrends)
@@ -47,7 +47,7 @@ A <- "unequal"
 mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
 
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
-fit <- MARSS(adultDat, model=mod.list.dfa, control=list(minit=200,maxit=50000+200), inits=list(A=matrix(m,ns,1)))
+fit <- MARSS(adultDat, model=mod.list.dfa, control=list(minit=200,maxit=5000+200), inits=list(A=matrix(m,ns,1)))
 
 d <- augment(fit, interval = "confidence")
 d$Year <- d$t + 1975
@@ -77,5 +77,13 @@ colnames(reAdult) <- colnames(keogh_adults)
 keogh_SR <- keogh_long[,!colnames(keogh_long)%in%"Stock"]
 keogh_new <- data.frame(keogh_SR,"Stock"=reAdult$Stock)
 plot(log(Recruits/Stock)~Stock,data=keogh_new[keogh_new$Species=="Coho",])
+
+coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
+coho <- coho[order(coho$Year),]
+
+plot(coho$Year,coho$Adults,pch=21,bg="orange",ylab="Coho adults",xlab="Year")
+points(adults$Year,adults$Stock.Coho,pch=21,bg="dodgerblue")
+points(adultEst$Year[is.na(adults$Stock.Coho)],adultEst$X5[is.na(adults$Stock.Coho)],type="l",lwd=2,col="black")
+legend("topright",c("NuSeds Escapement","Keogh resistivity counter","Imputed from DFA"),pch=c(21,21,NA),lty=c(NA,NA,1),lwd=c(NA,NA,2),pt.bg=c("orange","dodgerblue",NA),col=c(1,1,1),bty="n")
 saveRDS(keogh_new,file="Keogh_newStock_enviro.rds")
 

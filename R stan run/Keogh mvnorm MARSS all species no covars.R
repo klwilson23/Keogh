@@ -41,29 +41,27 @@ dat <- list("N"=nrow(x),
             "K"=ncol(x),
             "x"=x,
             "y"=y,
-            "init_priors"=rep(-2e-3,ncol(x)),
-            "J1"=ncol(xx1),
-            "J2"=ncol(xx2),
-            "J3"=ncol(xx3),
-            "J4"=ncol(xx4),
-            "J5"=ncol(xx5),
-            "xx1"=xx1,
-            "xx2"=xx2,
-            "xx3"=xx3,
-            "xx4"=xx4,
-            "xx5"=xx5)
+            "init_priors"=rep(-2e-3,ncol(x)))
 
-fit <- stan(file="Stan code/Keogh mnorm MARSS.stan",data=dat, iter=5000,chains=4,cores=4,control=list("adapt_delta"=0.9))
+fit <- stan(file="Stan code/Keogh mnorm MARSS no covars.stan",data=dat, iter=10000,chains=4,cores=4,control=list("adapt_delta"=0.9))
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm.rds")
 
-summary(fit,pars=c("beta","beta_steel","beta_dolly","beta_cutt","beta_pink","beta_coho","x0","L_Omega_obs","L_sigma_obs","L_Omega_proc","L_sigma_proc","Sigma_proc"),probs=c(0.025,0.975))$summary
+summary(fit,pars=c("beta","x0","L_Omega_obs","L_sigma_obs","L_Omega_proc","L_sigma_proc","Sigma_proc"),probs=c(0.025,0.975))$summary
 
 pro_corr <- extract(fit)$Omega_proc
 pro_corr_mn <- apply(pro_corr,c(3,2),mean)
 colnames(pro_corr_mn) <- row.names(pro_corr_mn) <- unique(keogh_long$Species)
 
-pdf("Figures/Keogh species interactions.pdf",width=6,height=6)
+pro_cov <- extract(fit)$Sigma_proc
+pro_cov_mn <- apply(pro_cov,c(3,2),mean)
+colnames(pro_cov_mn) <- row.names(pro_cov_mn) <- unique(keogh_long$Species)
+
+obs_corr <- extract(fit)$Omega
+obs_corr_mn <- apply(obs_corr,c(3,2),mean)
+colnames(obs_corr_mn) <- row.names(obs_corr_mn) <- unique(keogh_long$Species)
+
+pdf("Figures/Keogh alpha productivity stan marss.pdf",width=6,height=6)
 matLayout <- matrix(1:4,nrow=2,ncol=2,byrow=TRUE)
 layout(matLayout)
 par(mar=c(5,4,1,1))
@@ -80,7 +78,7 @@ for(k in 1:dat$K)
 dev.off()
 
 # productivity
-jpeg("Figures/Keogh productivity stan marss.jpeg",width=8,height=8,units="in",res=800)
+jpeg("Figures/Keogh smolt productivity stan marss.jpeg",width=8,height=8,units="in",res=800)
 matLayout <- matrix(c(1:5,0),nrow=3,ncol=2,byrow=TRUE)
 layout(matLayout)
 par(mar=c(5,4,1,1))
@@ -131,26 +129,5 @@ for(k in 1:dat$K)
   polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,k,],rev(ci[2,k,])),col=adjustcolor("dodgerblue",0.3),border=NA)
   points(rec,pch=21,bg="orange")
   Corner_text(unique(keogh_long$Species)[k],"topleft")
-}
-dev.off()
-
-pdf("Figures/Keogh productivity stan marss.pdf",width=6,height=6)
-matLayout <- matrix(c(1:5,0),nrow=3,ncol=2,byrow=TRUE)
-layout(matLayout)
-xlabels <- x
-par(mar=c(5,4,1,1))
-for(k in 1:dat$K)
-{
-  if(k==1) { betas <- extract(fit)$beta_steel}
-  if(k==2) { betas <- extract(fit)$beta_dolly}
-  if(k==3) { betas <- extract(fit)$beta_cutt}
-  if(k==4) { betas <- extract(fit)$beta_pink}
-  if(k==5) { betas <- extract(fit)$beta_coho}
-  for(j in 1:ncol(betas))
-  {
-    hist(betas[,j],xlab=)
-    plot(alpha_mns[k,],alpha_mns[j,],xlab=paste("alpha",unique(keogh_long$Species)[k]),ylab=paste("alpha",unique(keogh_long$Species)[j]),pch=21,bg="orange")
-    Corner_text(paste(unique(keogh_long$Species)[k],"v.",unique(keogh_long$Species)[j]),"topleft")
-  }
 }
 dev.off()

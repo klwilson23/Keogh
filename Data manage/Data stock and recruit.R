@@ -56,6 +56,8 @@ environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
 environ$seal_abundance[environ$year>=2014 & is.na(environ$seal_abundance)] <- environ$seal_abundance[environ$year==2014]
 environ$seal_density[environ$year>=2014 & is.na(environ$seal_density)] <- environ$seal_density[environ$year==2014]
 environ$total[environ$year>=2015 & is.na(environ$total)] <- environ$total[environ$year==2015]
+forestry <- readRDS("Data/keogh_logging.rds")
+forestry <- subset(forestry,forestry$Year>=min(environ$year))
 #saveRDS(environ,"environ_covars.rds")
 #environ <- readRDS("environ_covars.rds")
 
@@ -313,6 +315,7 @@ keogh_StockRec <- round(merge(stock_rec,merge(pinks,merge(ct_SR,merge(co_SR,merg
 
 colnames(environ)[colnames(environ)=="year"] <- "Year"
 keogh_SR <- merge(keogh_StockRec,environ,by="Year")
+keogh_SR <- merge(keogh_SR,forestry,by="Year")
 
 example <- reshape(keogh_SR,direction = "long",varying = list(c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","ch_Adults","co_Adults"),c("sh_Smolts","dv_Smolts","ct_Smolts","pk_Recruits","ch_Recruits","co_Smolts"),c("sh_juv_Cohort","dv_juv_Cohort","ct_juv_Cohort","pk_juv_Cohort","ch_juv_Cohort","co_juv_Cohort")),v.names=c("Stock","Recruits","juvCohort"),idvar="Species")
 
@@ -633,6 +636,8 @@ keogh_long$seals <- ifelse(seals==0,NA,seals)
 keogh_long$npgo <- ifelse(npgo==0,NA,npgo)
 keogh_long$mei <- ifelse(mei==0,NA,mei)
 keogh_long$oceanSalmon <- ifelse(oceanSalmon==0,NA,oceanSalmon)
+
+plot(log(Recruits/Stock)~log(cumul_footprint),data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
 
 plot(Recruits~sumTemp,data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
 plot(Recruits~sumRain,data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
