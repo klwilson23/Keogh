@@ -14,11 +14,13 @@ data {
   int K;
   matrix[N,K] x1;
   int J;
+  int JJ;
   matrix[N,J] x2;
   vector[N_obs] y1_obs;
   vector[N] y2;
   vector[N] y3;
   vector[N] x3; // vector of time-varying covariates
+  vector[N] juvCoh;
   int M;
   matrix[N,M] xx3;
   real init_s0;
@@ -28,7 +30,7 @@ parameters {
   
   vector[K] beta_surv;
   vector[J+1] beta_run;
-  real beta_adults;
+  vector[JJ] beta_adults;
   
   real<lower=0> sigma_surv_obs;
   real<lower=0> sigma_surv_pro;
@@ -49,7 +51,7 @@ parameters {
 
 transformed parameters {
   vector[N] pred_surv;
-  vector[N] pred_adults;
+  vector<lower=0>[N] pred_adults;
   vector[N] pred_run;
   vector[N] pred_rec;
   vector[N] y1;
@@ -64,7 +66,7 @@ transformed parameters {
   
   for(i in 1:N)
   {
-    pred_adults[i] = a0[i] + (pred_surv[i] - mean(pred_surv))/sd(pred_surv) * beta_adults;
+    pred_adults[i] = a0[i] + (pred_surv[i] - mean(pred_surv))/sd(pred_surv) * beta_adults[1] + juvCoh[i] * beta_adults[2];
   }
   
   for(i in 1:N)
@@ -90,7 +92,7 @@ model {
   sigma_surv_obs ~ cauchy(0,5);
 
   // trend in steelhead adults
-  beta_adults ~ normal(0,15);
+  beta_adults ~ normal(0,20);
   a0[1] ~ normal(mean(x3),sigma_adult_pro);
   for(i in 2:N)
   {

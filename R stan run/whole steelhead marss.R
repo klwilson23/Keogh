@@ -39,13 +39,13 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("mean_temp_egg", "total_rain_egg","cumul_log")
+XXXvars <- c("total_rain_egg","cumul_log")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
 enviro_prod <- data.frame(XXXvars=enviro_prod)
 colnames(enviro_prod) <- XXXvars
-xx3 <- model.matrix(~-1+mean_temp_egg+total_rain_egg+cumul_log,data=enviro_prod)
+xx3 <- model.matrix(~-1+total_rain_egg+cumul_log,data=enviro_prod)
 x3 <- model.matrix(~-1+Stock,data=sh_annual)
 
 # all models
@@ -53,8 +53,10 @@ dat <- list("N"=nrow(x1),
             "N_obs"=sum(!is.na(sh_annual$logit_surv)),
             "K"=ncol(x1),
             "J"=ncol(x2),
+            "JJ"=2,
             "x1"=x1,
             "x2"=x2,
+            "juvCoh"=as.vector(scale(sh_annual$juvCohort)),
             "x3"=as.numeric(x3),
             "y1_obs"=sh_annual$logit_surv[!is.na(sh_annual$logit_surv)],
             "y2"=sh_annual$run,
@@ -63,7 +65,12 @@ dat <- list("N"=nrow(x1),
             "xx3"=xx3,
             "init_s0"=mean(sh_annual$logit_surv[1:10],na.rm=TRUE))
 
-fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
+init_fx <- function(chain_id)
+{
+  list("beta_adults"=rep(0,dat$JJ))
+}
+
+fit <- stan(file="Stan code/steelhead dlm lnorm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
 #fit2 <- stan(file="Stan code/steelhead dlm cv.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 #fit3 <- stan(file="Stan code/steelhead dlm.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15))
 
@@ -289,7 +296,7 @@ points(ppx,colMeans(ppy),pch=21,bg="dodgerblue")
 betas <- extract(fit)$beta_surv
 colSums(betas>0)/nrow(betas)
 betas <- extract(fit)$beta_adult
-sum(betas>0)/length(betas)
+colSums(betas>0)/nrow(betas)
 betas <- extract(fit)$beta_run
 colSums(betas>0)/nrow(betas)
 betas <- extract(fit)$beta_rec_cov

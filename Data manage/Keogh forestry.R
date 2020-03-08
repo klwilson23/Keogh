@@ -72,7 +72,7 @@ sum_tot <- sum(logging_hist)
 forestry <- data.frame("Year"=years,"Logging"=as.numeric(logging_hist[match(years,names(logging_hist))]))
 forestry$Logging[is.na(forestry$Logging)] <- 0
 lag <- 15
-forestry$cumul_log <- c(rep(0,lag),sapply((lag+1):nrow(forestry),function(x){sum(forestry$Logging[(x-lag):x])}))
+forestry$cumul_log <- c(rep(0,lag),sapply((lag+1):nrow(forestry),function(x){mean(forestry$Logging[(x-lag):x])}))
 
 forestry$cumul_footprint <- cumsum(forestry$Logging)
 
