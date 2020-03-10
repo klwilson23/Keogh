@@ -39,13 +39,13 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("total_rain_egg","cumul_log")
+XXXvars <- c("total_rain_egg","mean_temp_egg","meanLogging")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
 enviro_prod <- data.frame(XXXvars=enviro_prod)
 colnames(enviro_prod) <- XXXvars
-xx3 <- model.matrix(~-1+total_rain_egg+cumul_log,data=enviro_prod)
+xx3 <- model.matrix(~-1+total_rain_egg+mean_temp_egg+meanLogging,data=enviro_prod)
 x3 <- model.matrix(~-1+Stock,data=sh_annual)
 
 # all models
