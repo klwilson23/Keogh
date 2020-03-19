@@ -61,11 +61,11 @@ transformed parameters{
 }
 
 model {
-  beta_steel ~ normal(0,1);
-  beta_dolly ~ normal(0,1);
-  beta_cutt ~ normal(0,1);
-  beta_pink ~ normal(0,1);
-  beta_coho ~ normal(0,1);
+  beta_steel ~ normal(0,5);
+  beta_dolly ~ normal(0,5);
+  beta_cutt ~ normal(0,5);
+  beta_pink ~ normal(0,5);
+  beta_coho ~ normal(0,5);
   beta ~ normal(-2e-3, 1);
   L_Omega_obs ~ lkj_corr_cholesky(1); 
   L_sigma_obs ~ student_t(3, 0, 2);

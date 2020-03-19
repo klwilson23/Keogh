@@ -90,7 +90,7 @@ model {
   sigma_surv_obs ~ cauchy(0,5);
 
   // trend in steelhead adults
-  beta_adults ~ normal(0,15);
+  beta_adults ~ normal(0,20);
   a0[1] ~ normal(mean(x3),sigma_adult_pro);
   for(i in 2:N)
   {

@@ -25,6 +25,7 @@ sh_annual$log_adults <- log(sh_annual$Stock)
 
 Xvars <- c("seals","npgo","oceanSalmon")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:scale")
+
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(Xvars=enviro)
@@ -39,13 +40,13 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("total_rain_egg","mean_temp_egg","meanLogging")
+XXXvars <- c("meanLogging","sumTemp","sumRain","winTemp","winRain","freshPink")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
 enviro_prod <- data.frame(XXXvars=enviro_prod)
 colnames(enviro_prod) <- XXXvars
-xx3 <- model.matrix(~-1+total_rain_egg+mean_temp_egg+meanLogging,data=enviro_prod)
+xx3 <- model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=enviro_prod)
 x3 <- model.matrix(~-1+Stock,data=sh_annual)
 
 # all models
@@ -84,6 +85,14 @@ summary(fit,pars=c("y1_miss","beta_surv","beta_adults","beta_run","beta_rec","be
 summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_obs","sigma_adult_pro","sigma_run_obs","sigma_run_pro","sigma_rec_process","sigma_rec_obs"),probs=c(0.025,0.975))$summary
 
 summary(fit,pars=c("s0","a0","r0","x0"),probs=c(0.025,0.975))$summary
+
+
+keogh_fit <- readRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm covars.rds")
+alphas <- extract(keogh_fit)$x0
+steel_alphas <- extract(fit)$x0
+
+plot(colMeans(steel_alphas),colMeans(alphas[,,1]))
+abline(b=1,a=0)
 
 #pairs(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_run_pro","sigma_run_obs","sigma_rec_process","sigma_rec_obs"))
 # survival
@@ -191,13 +200,13 @@ points(dat$y3,pch=21,bg="orange")
 x0 <- extract(fit)$x0
 betas <- extract(fit)$beta_rec_cov
 rain_seq <- seq(from=-2,to=2,length.out=25)
-ppd <- sapply(1:nrow(betas),function(x){betas[x,3] * rain_seq})
+ppd <- sapply(1:nrow(betas),function(x){betas[x,2] * rain_seq})
 ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
 plot(rain_seq,rowMeans(ppd),xlab="",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n",yaxt="n")
 axis(1,line=0)
 axis(2,line=0)
 mtext("\u0394 productivity",side=2,line=2.5,cex=ptSize)
-mtext("Rainfall during egg incubation",side=1,line=2,cex=ptSize)
+mtext("Cumulative logging (15 years)",side=1,line=2,cex=ptSize)
 polygon(c(rain_seq,rev(rain_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
 
 # recruitment
@@ -301,3 +310,20 @@ betas <- extract(fit)$beta_run
 colSums(betas>0)/nrow(betas)
 betas <- extract(fit)$beta_rec_cov
 colSums(betas>0)/nrow(betas)
+
+betas_rec <- extract(fit)$beta_rec
+betas_rec_covar <- extract(fit)$beta_rec_cov
+covar_seq <- seq(from=min(dat$xx3[,1]),to=max(dat$xx3[,1]),length=25)
+ppd <- extract(fit)$x0
+mus <- extract(fit)$pred_rec
+resid_alphas <- mus - sapply(dat$x3,function(x){x*betas_rec}) - ppd - apply(dat$xx3[,-1],1,function(x){rowSums(x*betas_rec_covar[,-1])})
+pred <- apply(resid_alphas,2,quantile,probs=c(0.025,0.975))
+
+plot(dat$xx3[,1],colMeans(resid_alphas),ylim=range(pred,na.rm=TRUE),type="p",pch=21,xlab="Cumulative logging (15 years)",ylab="Residual productivity (ln R/S)",xaxt="n",bg="grey50")
+segments(x0=dat$xx3,y0=pred[1,],y1=pred[2,],lwd=0.5)
+regress <- sapply(covar_seq,function(x){x*betas_rec_covar[,1]})
+ci <- apply(regress,2,quantile,probs=c(0.025,0.975))
+axis(1,labels=NULL,tick=TRUE)
+polygon(c(covar_seq,rev(covar_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+points(dat$xx3[,1],colMeans(resid_alphas),pch=21,bg="grey50")
+Corner_text(unique(keogh_long$Species)[1],"topleft")

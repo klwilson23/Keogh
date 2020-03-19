@@ -12,10 +12,6 @@ keogh_long <- subset(keogh_long,Species!="Chum")
 keogh <- subset(keogh_long,select = c(Year,Species,Stock,Recruits,juvCohort))
 keogh <- reshape(keogh,direction = "wide",idvar="Year",timevar="Species")
 
-keogh_long[keogh_long$Year>2012,c("Logging","cumul_log","cumul_footprint","meanLogging","cumLogging")] <- NA
-
-head(keogh_long)
-
 environment <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink,seals,npgo,mei,oceanSalmon,Logging,cumul_log,cumul_footprint,meanLogging,cumLogging))
 enviro <- reshape(environment,direction = "wide",idvar="Year",timevar="Species")
 

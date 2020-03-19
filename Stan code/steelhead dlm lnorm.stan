@@ -45,7 +45,7 @@ parameters {
   real<upper=0> beta_rec;
   real<lower=0> sigma_rec_process;
   real<lower=0> sigma_rec_obs;
-  vector[M+1] beta_rec_cov;
+  vector[M] beta_rec_cov;
   real y1_miss;
 }
 
@@ -75,7 +75,7 @@ transformed parameters {
   }
   for(i in 1:N)
   {
-    pred_rec[i] = x3[i] * beta_rec + x0[i] + (pred_run[i] - mean(pred_run))/sd(pred_run) * beta_rec_cov[1] + xx3[i] * beta_rec_cov[2:(M+1)];
+    pred_rec[i] = x3[i] * beta_rec + x0[i] + xx3[i] * beta_rec_cov;
   }
 }
 
@@ -118,8 +118,8 @@ model {
   {
     x0[i] ~ normal(x0[i-1],sigma_rec_process);
   }
-  sigma_rec_process ~ cauchy(0,5);
-  sigma_rec_obs ~ cauchy(0,5);
+  sigma_rec_process ~ student_t(3, 0, 2);
+  sigma_rec_obs ~ student_t(3, 0, 2);
   beta_rec_cov ~ normal(0,5);
   
   // likelihood below
