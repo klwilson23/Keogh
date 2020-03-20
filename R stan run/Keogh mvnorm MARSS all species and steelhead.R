@@ -9,6 +9,7 @@ library(wesanderson)
 library(rstan)
 library(loo)
 library(rethinking)
+library(corrplot)
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores(logical=FALSE))
@@ -49,7 +50,7 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("meanLogging","sumTemp","sumRain","winTemp","winRain","freshPink")
+XXXvars <- c("meanLogging","total_rain_egg","mean_temp_egg","freshPink")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
@@ -60,7 +61,7 @@ x <- as.matrix(keogh_wide[,grep("Stock",colnames(keogh_wide))])
 y <- as.matrix(keogh_wide[,grep("prod",colnames(keogh_wide))])
 y[which(is.na(y),arr.ind=TRUE)] <- colMeans(y[1:10,],na.rm=TRUE)[which(is.na(y),arr.ind=TRUE)[,2]]
 
-xx1 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=enviro_prod),center=TRUE,scale=TRUE)
+xx1 <- scale(model.matrix(~-1+meanLogging+total_rain_egg+mean_temp_egg+freshPink,data=enviro_prod),center=TRUE,scale=TRUE)
 xx2 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Dolly Varden",]),center=TRUE,scale=TRUE)
 xx3 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Cutthroat",]),center=TRUE,scale=TRUE)
 xx4 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+seals+oceanSalmon+npgo+winTemp+winRain,data=keogh_long[keogh_long$Species=="Pink",]),center=TRUE,scale=TRUE)
@@ -105,7 +106,7 @@ init_fx <- function(chain_id)
        "beta_adults"=rep(0,dat$P))
 }
 
-fit <- stan(file="Stan code/Keogh mnorm MARSS and steelhead.stan",data=dat, iter=5000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
+fit <- stan(file="Stan code/Keogh mnorm MARSS and steelhead.stan",data=dat, iter=6000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm covars.rds")
 
@@ -144,11 +145,14 @@ layout(matLayout)
 par(mar=c(5,4,1,1))
 ppd <- extract(fit)$x0
 alpha_mns <- apply(ppd,c(3,2),mean)
+r <- matrix(NA,nrow=dat$K,ncol=dat$K,dimnames=list(unique(keogh_long$Species),unique(keogh_long$Species)))
+diag(r) <- 1
 ci <- apply(ppd,c(3,2),quantile,probs=c(0.025,0.975))
 for(k in 1:dat$K)
 {
   for(j in (1:dat$K)[(1:dat$K)!=k])
   {
+    r[k,j] <- mean(apply(ppd,1,function(x){cor(x[,k],x[,j])}))
     plot(alpha_mns[k,],alpha_mns[j,],xlab=paste("alpha",unique(keogh_long$Species)[k]),ylab=paste("alpha",unique(keogh_long$Species)[j]),pch=21,bg="orange",ylim=range(ci[,j,]),xlim=range(ci[,k,]))
     segments(x0=ci[1,k,],x1=ci[2,k,],y0=alpha_mns[j,],lwd=0.5)
     segments(x0=alpha_mns[k,],y0=ci[1,j,],y1=ci[2,j,],lwd=0.5)
@@ -156,6 +160,13 @@ for(k in 1:dat$K)
     Corner_text(paste(unique(keogh_long$Species)[k],"v.",unique(keogh_long$Species)[j]),"topleft")
   }
 }
+dev.off()
+
+jpeg("Figures/Keogh species correlations.jpeg",width=8,height=8,units="in",res=800)
+layout(1)
+par(mar=c(1,1,1,1),mai=c(0.2,0.2,0.2,0.2))
+colFun <- colorRampPalette(c("tomato","orange","dodgerblue","darkblue"))
+corrplot.mixed(r,upper="ellipse",lower.col="black",tl.col="black",upper.col = colFun(100))
 dev.off()
 
 # productivity
@@ -252,28 +263,28 @@ dev.off()
 
 # steelhead lifecycle
 # survival
-jpeg(paste("Figures/Steelhead cycle marss ",Sys.Date(),".jpeg",sep=""),res=800,height=7,width=8,units="in")
+jpeg(paste("Figures/Steelhead cycle marss ",Sys.Date(),".jpeg",sep=""),res=800,height=8,width=8,units="in")
 regime <- which(sh_annual==1991)
 matLayout <- matrix(0,nrow=15,ncol=15)
-matLayout[1:3,1:11] <- 1
-matLayout[1:3,12:15] <- 2
+matLayout[1:3,1:10] <- 1
+matLayout[1:3,11:15] <- 2
 
-matLayout[4:6,1:11] <- 3
-matLayout[4:6,12:15] <- 4
+matLayout[4:6,1:10] <- 3
+matLayout[4:6,11:15] <- 4
 
-matLayout[7:9,1:11] <- 5
-matLayout[7:9,12:15] <- 6
+matLayout[7:9,1:10] <- 5
+matLayout[7:9,11:15] <- 6
 
-matLayout[10:12,1:11] <- 7
-matLayout[10:12,12:15] <- 8
+matLayout[10:12,1:10] <- 7
+matLayout[10:12,11:15] <- 8
 
-matLayout[13:15,1:11] <- 9
-matLayout[13:15,12:15] <- 10
+matLayout[13:15,1:10] <- 9
+matLayout[13:15,11:15] <- 10
 
 ptSize <- 0.7
 
 layout(matLayout)
-par(mar=c(3.5,4,0.5,0.5),mai=c(0.3,0.55,0.2,0.05))
+par(mar=c(3.5,4,0,0.5),mai=c(0.45,0.55,0.05,0.05))
 ppd <- extract(fit)$y1_ppd
 ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
 plot(colMeans(ppd),ylim=range(ci,quantile(1/(1+exp(-extract(fit)$y1_miss)),probs=c(0.05,0.95))),type="l",lwd=2,xlab="",ylab="Marine survival (yr-1)",xaxt="n")
@@ -286,17 +297,17 @@ segments(x0=1:ncol(ppx),y0=ci[1,],y1=ci[2,],lwd=2,col="darkorange")
 points(colMeans(1/(1+exp(-ppx))),pch=21,bg="darkorange")
 
 # some effects on survival
-s0 <- extract(fit)$s0
+
 betas <- extract(fit)$beta_surv
-seal_seq <- seq(from=-2,to=2,by=0.01)
-ppd <- sapply(1:nrow(betas),function(x){betas[x,1] * seal_seq})
-ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
-plot(seal_seq,rowMeans(ppd),xlab="",yaxt="n",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n")
-axis(1,line=0)
+std_eff <- apply(betas,2,function(x){c(quantile(x,probs=0.05),mean(x),quantile(x,probs=0.95))})/sd(dat$y1_obs)
+colnames(std_eff) <- c("Seal densities","NPGO","NP Salmon biomass")
+plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
+axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=ptSize)
 axis(2,line=0)
-mtext("\u0394 survival (logit)",side=2,line=2.5,cex=ptSize)
-mtext("Seal densities",side=1,line=2.5,cex=ptSize)
-polygon(c(seal_seq,rev(seal_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+mtext("Std. effect size",side=2,cex=ptSize,line=2.5)
+segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
+points(std_eff[2,],pch=21,bg="dodgerblue",cex=1.5)
+abline(h=0,lwd=1,lty=5)
 
 # adult abundance
 ppd <- extract(fit)$x3_ppd
@@ -309,17 +320,16 @@ polygon(c(regime:40,rev(regime:40)),c(ci[1,regime:40],rev(ci[2,regime:40])),col=
 points(sh_annual$Stock,pch=21,bg="orange")
 
 # some effects on adult abundance
-a0 <- extract(fit)$a0
 betas <- extract(fit)$beta_adults
-surv_seq <- seq(from=-2,to=2,by=0.01)
-ppd <- sapply(1:length(betas),function(x){betas[x] * surv_seq})
-ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
-plot(surv_seq,rowMeans(ppd),xlab="",yaxt="n",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n")
-axis(1,line=0)
+std_eff <- apply(betas,2,function(x){c(quantile(x,probs=0.05),mean(x),quantile(x,probs=0.95))})/log(sd(dat$x[,1]))
+colnames(std_eff) <- c("Marine survival","Smolt cohort size")
+plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
+axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=ptSize)
 axis(2,line=0)
-mtext("\u0394 adults",side=2,line=2.5,cex=ptSize)
-mtext("\u0394 survival (logit)",side=1,line=2.5,cex=ptSize)
-polygon(c(surv_seq,rev(surv_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+mtext("Std. effect size",side=2,cex=ptSize,line=2.5)
+segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
+points(std_eff[2,],pch=21,bg="dodgerblue",cex=1.5)
+abline(h=0,lwd=1,lty=5)
 
 # run time
 ppd <- extract(fit)$y2_ppd
@@ -331,17 +341,16 @@ polygon(c(regime:40,rev(regime:40)),c(ci[1,regime:40],rev(ci[2,regime:40])),col=
 points(dat$y2,pch=21,bg="orange")
 
 # some effects on run time
-r0 <- extract(fit)$r0
 betas <- extract(fit)$beta_run
-surv_seq <- seq(from=-2,to=2,length.out=25)
-ppd <- sapply(1:nrow(betas),function(x){betas[x,2] * surv_seq})
-ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
-plot(surv_seq,rowMeans(ppd),xlab="",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n",yaxt="n")
-axis(1,line=0)
+std_eff <- apply(betas,2,function(x){c(quantile(x,probs=0.05),mean(x),quantile(x,probs=0.95))})/sd(dat$y2)
+colnames(std_eff) <- c("ln(Adults)","Rainfall before run","Temp. before run")
+plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
+axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=ptSize)
 axis(2,line=0)
-mtext("\u0394 run time",side=2,line=2.5,cex=ptSize)
-mtext("ln adult abundance",side=1,line=2.5,cex=ptSize)
-polygon(c(surv_seq,rev(surv_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+mtext("Std. effect size",side=2,cex=ptSize,line=2.5)
+segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
+points(std_eff[2,],pch=21,bg="dodgerblue",cex=1.5)
+abline(h=0,lwd=1,lty=5)
 
 # productivity
 ppd <- extract(fit)$y_ppd[,,1]
@@ -353,17 +362,17 @@ polygon(c(regime:40,rev(regime:40)),c(ci[1,regime:40],rev(ci[2,regime:40])),col=
 points(dat$y[,1],pch=21,bg="orange")
 
 # some effects on productivity
-x0 <- extract(fit)$x0[,,1]
 betas <- extract(fit)$beta_steel
-rain_seq <- seq(from=-2,to=2,length.out=25)
-ppd <- sapply(1:nrow(betas),function(x){betas[x,1] * rain_seq})
-ci <- apply(ppd,1,quantile,probs=c(0.05,0.95))
-plot(rain_seq,rowMeans(ppd),xlab="",type="l",ylab="",ylim=range(ci),lwd=2,xaxt="n",yaxt="n")
-axis(1,line=0)
+std_eff <- apply(betas,2,function(x){c(quantile(x,probs=0.05),mean(x),quantile(x,probs=0.95))})/sd(dat$y[,1])
+#colnames(std_eff) <- c("Cumulative logging","Summer temp.","Summer rain","Winter temp.","Winter rain","Pink salmon in early life","Spawn date")
+#olnames(std_eff) <- c("Cumulative logging","Rainfall after run","Temp. after run","Pink salmon in FW","Spawn date")
+plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
+axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=ptSize)
 axis(2,line=0)
-mtext("\u0394 productivity",side=2,line=2.5,cex=ptSize)
-mtext("Cumulative logging (15 years)",side=1,line=2,cex=ptSize)
-polygon(c(rain_seq,rev(rain_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+mtext("Std. effect size",side=2,cex=ptSize,line=2.5)
+segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
+points(std_eff[2,],pch=21,bg="dodgerblue",cex=1.5)
+abline(h=0,lwd=1,lty=5)
 
 # recruitment
 ppd <- extract(fit)$R[,,1]
@@ -394,7 +403,7 @@ plot(adult_seq,rowMeans(ppd),xlab="",type="l",ylab="",ylim=range(ci,ci2),lwd=2,x
 axis(1,line=0)
 axis(2,line=0)
 mtext("Smolt recruitment",side=2,line=2.5,cex=ptSize)
-mtext("Steelhead adults",side=1,line=2.5,cex=ptSize)
+mtext("Adult steelhead",side=1,line=2.5,cex=ptSize)
 polygon(c(adult_seq,rev(adult_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
 lines(adult_seq2,rowMeans(ppd2),lwd=2)
 polygon(c(adult_seq2,rev(adult_seq2)),c(ci2[1,],rev(ci2[2,])),col=adjustcolor("blue",0.3),border=NA)

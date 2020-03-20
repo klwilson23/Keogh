@@ -78,7 +78,7 @@ transformed parameters{
   
   for(i in 1:N)
   {
-    pred_run[i] = r0[i] + log(x[i,1]) * beta_run[1] + x2[i] * beta_run[2:(Q+1)];
+    pred_run[i] = r0[i] + (log(x[i,1])-mean(log(x[,1])))/sd(log(x[,1])) * beta_run[1] + x2[i] * beta_run[2:(Q+1)];
   }
   
   for (n in 1:N)

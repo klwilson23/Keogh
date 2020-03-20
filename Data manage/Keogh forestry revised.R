@@ -1,26 +1,15 @@
-# Trevor Davies
-# Started on August 23, 2019
-# This file is to make a map of all the flow and sampling sites for 1-509
-
-# See: https://github.com/bcgov/bcmaps
-# see: https://cran.r-project.org/web/packages/bcmaps/bcmaps.pdf
-# availble layers in bcmaps:
-# https://gist.github.com/ateucher/86674e12ffba66ecce87cceb7bffbf41
-#https://github.com/poissonconsulting/fwabc#<https://github.com/poissonconsulting/fwabc>
-#https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html
-
 library(bcdata)
 library(dplyr)
 library(bcmaps)
-library(sf)
-library(sp)
 library(ggplot2)
 library(ggspatial) # this is for adding the arrows
 library(rgdal) #use this for data conversion
 library(ggrepel) # to offset labels using geom_sf_label_repel  --> Not done here
 library(riverdist) # to snap points to River --> Not done here
 library(bcmapsdata)
-library(viridis)
+library(sf)
+library(sp)
+library(raster)
 # Set plot box.  Set Port McNeil as centre and box is 25km to each side
 plot_area1 <- bc_cities() %>%   #Extract datafram of all bc cities location
   filter(NAME == "Port McNeill") %>%
@@ -69,54 +58,53 @@ rivers_in_plot_area <- bcdc_query_geodata("92344413-8035-4c08-b996-65a9b3f62fca"
 # Extract only the keogh river data from the plot box
 keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
 
-#Below is to get a dataset of lakes in plot box
-lakes_in_plot_area <- bcdc_query_geodata("freshwater-atlas-lakes") %>%
-  filter(INTERSECTS(plot_area1)) %>%
-  collect() %>%
-  st_intersection(plot_area1)
-
-# Ocean colouring - this doesn't work well  because the resolution isn't the same
-# ocean_colour <- bc_neighbours() %>%
-# filter(type=="Ocean") %>%
-# st_intersection(plot_area1)
-###########
-
 # load forestry data
-library(raster)
 str_name<-'~/Google Drive/SFU postdoc/Keogh river/BC_disturbance/logging_ageclass2012/logging_year.tif' 
 log_year <- raster(str_name)
 proj4string(log_year) <- CRS("+init=EPSG:3005")
-ext <- extent(plot_area1[[1]][1][[1]][1:4,])
-log_year_crop <- crop(log_year,ext)
-log_year_crop@data@attributes[[1]]$Rowid <- log_year_crop@data@attributes[[1]]$ID
-logging_df <- as.data.frame(log_year_crop,xy=TRUE)
-head(logging_df)
-colnames(logging_df) <- c("x", "y","Year","count")
-logging_df$Year <- as.numeric(logging_df$Year)
-logging_df <- logging_df[complete.cases(logging_df),]
-## Plot map -- Order of plotting MATTERS
-keogh_map <- ggplot() +
-              geom_sf(data = coast_line, fill = "grey95") +                 #Plot coastline
-              geom_sf(data = plot_area1, alpha = 0,colour='black') +        #Plot area box
-              geom_tile(data=logging_df, aes(x=x, y=y, fill=Year), alpha=0.8) +
-              scale_fill_viridis(name = "Last logging year",option="cividis",direction=-1) +
-              geom_sf(data = rivers_in_plot_area, colour = "lightblue3") +  #Plot Rivers
-              geom_sf(data = lakes_in_plot_area, fill = "lightblue1") +     #Plot Lakes
-              geom_sf(data = keogh_r, colour = "tomato",lwd=1.2)+              #Plot Keogh R in RED
-              #geom_sf_label(data=data_point_labels,label=data_point_labels$Location,size=2)+ #Add labels
-              coord_sf(expand = FALSE) +                                    #Expands box to axes
-              #geom_sf(data=ocean_colour,fill='red') +                      #Plot Ocean (not working)
-              geom_sf_label(data=city_df,label=city_df$NAME) +            #Labels
-              xlab('Longitude') + ylab('Latitude') +                        #Axis titles
-              annotation_scale(location = "tl", width_hint = 0.5) +         #Rose Compass
-              annotation_north_arrow(location = "bl", which_north = "true",
-                                     pad_x = unit(0.75, "in"), pad_y = unit(5.5, "in"),
-                                     style = north_arrow_fancy_orienteering)+
-              theme(panel.background = element_rect('lightblue1')           #Make empty space blue to colour ocean
-                    , panel.grid.major = element_line('lightblue1'),
-                    legend.position="top",legend.text = element_text(size=8),legend.key.width=unit(0.75, "in"))
+layout(1)
+plot(log_year)
+points(keogh_points,type="l",cex=3)
 
-keogh_map
-#Save the plot
-ggsave('Figures/keogh_map.pdf',plot=keogh_map,width = 8, height = 8,units='in',dpi=800)
-?ggsave
+log_max <- extract(log_year,             # raster layer
+                   keogh_points[1,1:2],   # SPDF with centroids for buffer
+                   buffer = 10000,     # buffer size, units depend on CRS
+                   fun=table,         # what to value to extract
+                   df=TRUE)         # return a dataframe?
+
+lu <- spPolygons( rbind(c(-180,-20), c(-160,5), c(-60, 0), 
+                        c(-160,-60), c(-180,-20)),rbind(c(80,0), 
+                                                        c(100,60), c(120,0), c(120,-55), c(80,0)))
+lu <- SpatialPolygonsDataFrame(lu, data.frame(class=c("urban","ag")))
+raster::subset(log_year,log_year@data@attributes[[1]]$ID==log_max[1])
+ext <- extent(keogh_r)
+ext@xmin <- ext@xmin-25000
+ext@xmax <- ext@xmax+25000
+ext@ymin <- ext@ymin-25000
+ext@ymax <- ext@ymax+1000
+new_rast <- crop(log_year,ext)
+plot(new_rast)
+points(keogh_points,type="p",cex=1)
+
+xscale <- (extent(log_year)@xmax-extent(log_year)@xmin)/log_year@ncols # meters per pixel
+yscale <- (extent(log_year)@ymax-extent(log_year)@ymin)/log_year@nrows # meters per pixel
+years <- 1752:2017
+
+logging_hist <- table(new_rast@data@values)*xscale
+sum_tot <- sum(logging_hist)
+forestry <- data.frame("Year"=years,"Logging"=as.numeric(logging_hist[match(years,names(logging_hist))]))
+forestry$Logging[forestry$Year>2012] <- forestry$Logging[forestry$Year==2012]
+forestry$Logging[is.na(forestry$Logging)] <- 0
+lag <- 15
+forestry$cumul_log <- c(rep(0,lag),sapply((lag+1):nrow(forestry),function(x){sum(forestry$Logging[(x-lag):x])}))
+
+forestry$cumul_footprint <- cumsum(forestry$Logging)
+
+layout(matrix(1:2,ncol=2))
+par(mar=c(5,4,1,1))
+plot(forestry$Year,forestry$cumul_log,type="l",lwd=2,xlab="Year",ylab="10-year moving window logged area (m2)")
+abline(v=1991,lwd=2,lty=2,col="red")
+plot(forestry$Year,forestry$cumul_footprint,type="l",lwd=2,xlab="Year",ylab="Cumulative logged area (m2)")
+abline(v=1991,lwd=2,lty=2,col="red")
+
+saveRDS(forestry,file="Data/keogh_logging.rds")
