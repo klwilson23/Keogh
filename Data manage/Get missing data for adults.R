@@ -11,8 +11,13 @@ keogh_long <- subset(keogh_long,Species!="Chum")
 
 keogh_adults <- subset(keogh_long,select = c(Year,Species,Stock))
 
-adults <- reshape(keogh_adults,direction = "wide",idvar="Year",timevar="Species")
+coho <- read.csv("Data/Keogh coho adults.csv",stringsAsFactors = F,header=T)
+coho <- coho[order(coho$Year),]
+coho <- coho[coho$Year>=1976,]
 
+adults <- reshape(keogh_adults,direction = "wide",idvar="Year",timevar="Species")
+adults$Stock.Coho2 <- rep(NA,nrow(adults))
+adults$Stock.Coho2[adults$Year < 1998] <- coho$Adults[coho$Year < 1998]
 adultNew <- adults
 adultDat <- adults[,-1]
 sdScale <- attr(scale(adultDat,center=FALSE,scale=TRUE),"scaled:scale")
@@ -42,6 +47,7 @@ x0 <- "zero"
 Z <- matrix(list(0), ns, nTrends)
 Z[1:(ns * nTrends)] <- sapply(1:nTrends,function(x){paste0("z",x,1:ns)})
 Z[upper.tri(Z)] <- 0
+Z[nrow(Z),] <- Z[nrow(Z)-1,]
 A <- "unequal"
 #A <- "zero"
 mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
@@ -52,7 +58,7 @@ fit <- MARSS(adultDat, model=mod.list.dfa, control=list(minit=200,maxit=5000+200
 d <- augment(fit, interval = "confidence")
 d$Year <- d$t + 1975
 spp <- matrix(unlist(strsplit(as.character(d$.rownames),".",fixed=TRUE)),ncol=2,byrow=TRUE)[,2]
-d$Species <- factor(spp,levels=levels(keogh_adults$Species))
+d$Species <- factor(spp,levels=c(levels(keogh_adults$Species),"Coho2"))
 
 adultFits <- matrix(sapply(1:nrow(d),function(x){matches <- names(sdScale)%in%d$.rownames[x];
 d$.fitted[x]*sdScale[matches]}),nrow=ncol(adultDat),ncol=nrow(adultDat),byrow=FALSE)
@@ -71,9 +77,11 @@ print(p)
 adultEst <- data.frame("Year"=adultNew$Year,adultFits)
 adultNew[which(is.na(adultNew),arr.ind=TRUE)] <- adultEst[which(is.na(adultNew),arr.ind=TRUE)]
 adultNew[which(adultNew<=0,arr.ind=TRUE)] <- 1e-3
+#adultNew <- adultNew[,-(match("Stock.Coho2",colnames(adultNew)))]
 reAdult <- reshape(adultNew,direction="long",idvar="Year",timevar="Species")
+reAdult <- reAdult[,-match("Stock.Coho2",colnames(reAdult))]
 colnames(reAdult) <- colnames(keogh_adults)
-
+#reAdult <- reAdult[reAdult$Species,]
 keogh_SR <- keogh_long[,!colnames(keogh_long)%in%"Stock"]
 keogh_new <- data.frame(keogh_SR,"Stock"=reAdult$Stock)
 plot(log(Recruits/Stock)~Stock,data=keogh_new[keogh_new$Species=="Coho",])

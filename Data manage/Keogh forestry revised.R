@@ -9,7 +9,7 @@ library(riverdist) # to snap points to River --> Not done here
 library(bcmapsdata)
 library(sf)
 library(sp)
-library(raster)
+
 # Set plot box.  Set Port McNeil as centre and box is 25km to each side
 plot_area1 <- bc_cities() %>%   #Extract datafram of all bc cities location
   filter(NAME == "Port McNeill") %>%
@@ -59,6 +59,7 @@ rivers_in_plot_area <- bcdc_query_geodata("92344413-8035-4c08-b996-65a9b3f62fca"
 keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
 
 # load forestry data
+library(raster)
 str_name<-'~/Google Drive/SFU postdoc/Keogh river/BC_disturbance/logging_ageclass2012/logging_year.tif' 
 log_year <- raster(str_name)
 proj4string(log_year) <- CRS("+init=EPSG:3005")
