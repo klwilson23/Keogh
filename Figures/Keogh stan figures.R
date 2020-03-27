@@ -309,6 +309,36 @@ for(k in 1:dat$K)
 }
 dev.off()
 
+pdf("Figures/Keogh survival regression stan marss.pdf",width=5.5,height=5.5)
+ppd <- extract(fit)$s0
+ci <- apply(ppd,2,quantile,probs=intervals)
+mns <- apply(ppd,2,mean)
+mus <- extract(fit)$pred_surv
+for(k in 1:dat$K)
+{
+  xnames <- c("Seal densities","NPGO","NP salmon")
+  betas <- extract(fit)$beta_surv
+  xx <- x1
+  matLayout <- matrix(c(1:ncol(xx),rep(0,4-ncol(xx))),nrow=2,ncol=2,byrow=TRUE)
+  layout(matLayout)
+  par(mar=c(5,4,1,1))
+  for(j in 1:ncol(betas))
+  {
+    covar_seq <- seq(from=min(xx[,j]),to=max(xx[,j]),length=25)
+    resid_alphas <- mus - ppd - apply(xx[,-j],1,function(x){rowSums(x*betas[,-j])})
+    pred <- apply(resid_alphas,2,quantile,probs=intervals)
+    plot(xx[,j],colMeans(resid_alphas),ylim=range(pred,na.rm=TRUE),type="p",pch=21,xlab=xnames[j],ylab="Residual logit survival",xaxt="n",bg="grey50")
+    segments(x0=xx[,j],y0=pred[1,],y1=pred[2,],lwd=0.5)
+    regress <- sapply(covar_seq,function(x){x*betas[,j]})
+    ci <- apply(regress,2,quantile,probs=intervals)
+    axis(1,labels=NULL,tick=TRUE)
+    polygon(c(covar_seq,rev(covar_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
+    points(xx[,j],colMeans(resid_alphas),pch=21,bg="grey50")
+    abline(lm(colMeans(resid_alphas)~xx[,j]))
+  }
+}
+dev.off()
+
 # steelhead lifecycle
 # survival
 jpeg("Figures/Steelhead cycle marss.jpeg",res=800,height=8,width=8,units="in")
