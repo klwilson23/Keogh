@@ -1,18 +1,3 @@
-detach_package <- function(pkg, character.only = FALSE)
-{
-  if(!character.only)
-  {
-    pkg <- deparse(substitute(pkg))
-  }
-  search_item <- paste("package", pkg, sep = ":")
-  while(search_item %in% search())
-  {
-    detach(search_item, unload = TRUE, character.only = TRUE)
-  }
-}
-detach_package("raster")
-detach_package("tidyr")
-
 source("some functions.R")
 library(reshape2)
 library(gridExtra)
@@ -30,7 +15,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores(logical=FALSE))
 Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7')
 
-keogh <- readRDS("Keogh_newRec_enviro.rds")
+keogh <- readRDS("Keogh_collinear_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 keogh_long$Species <- factor(keogh_long$Species,levels=unique(keogh_long$Species))
@@ -48,14 +33,14 @@ sh_annual <- subset(sh_annual,year<=2015 & year>=1976)
 sh_annual$logit_surv[1] <- NA
 sh_annual$log_adults <- log(sh_annual$Stock)
 
-Xvars <- c("seals","npgo","oceanSalmon")
+Xvars <- c("ocean_interact","npgo","ocean_covar_2")
 sdSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:scale")
 
 mnSurv_sh <- attr(scale(sh_annual[,Xvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro <- scale(sh_annual[,Xvars],center=TRUE,scale=TRUE)
 enviro <- data.frame(Xvars=enviro)
 colnames(enviro) <- Xvars
-x1 <- model.matrix(~-1+seals+npgo+oceanSalmon,data=enviro)
+x1 <- model.matrix(~-1+ocean_interact+npgo+ocean_covar_2,data=enviro)
 
 XXvars <- c("total_rain_run","mean_temp_run")
 sdSurv_run <- attr(scale(sh_annual[,XXvars],center=TRUE,scale=TRUE),"scaled:scale")
@@ -79,7 +64,7 @@ y[which(is.na(y),arr.ind=TRUE)] <- colMeans(y[1:10,],na.rm=TRUE)[which(is.na(y),
 xx1 <- scale(model.matrix(~-1+meanLogging+total_rain_egg+mean_temp_egg+freshPink,data=enviro_prod),center=TRUE,scale=TRUE)
 xx2 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Dolly Varden",]),center=TRUE,scale=TRUE)
 xx3 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Cutthroat",]),center=TRUE,scale=TRUE)
-xx4 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+seals+oceanSalmon+npgo+winTemp+winRain,data=keogh_long[keogh_long$Species=="Pink",]),center=TRUE,scale=TRUE)
+xx4 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+ocean_interact+ocean_covar_2+npgo+winTemp+winRain,data=keogh_long[keogh_long$Species=="Pink",]),center=TRUE,scale=TRUE)
 xx5 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Coho",]),center=TRUE,scale=TRUE)
 
 
@@ -376,7 +361,7 @@ points(colMeans(1/(1+exp(-ppx))),pch=21,bg="darkorange")
 
 betas <- extract(fit)$beta_surv
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y1_obs)
-colnames(std_eff) <- c("Seal densities","NPGO","NP Salmon biomass")
+colnames(std_eff) <- c("Ocean PCA-1","NPGO","Ocean PCA-2")
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=ptSize)
 axis(2,line=0)

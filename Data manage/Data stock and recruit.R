@@ -1,3 +1,4 @@
+install.packages("labeling")
 library(reshape2)
 library(igraph)
 library(ggplot2)
@@ -811,6 +812,13 @@ ggplot(adult_run, aes(x = run, y=as.factor(year),fill=..x..)) +
   scale_fill_gradient2(name="Run date",low="blue",high="orange",mid="dodgerblue",midpoint=75)
 
 ggsave(filename="Figures/runtime v2.jpeg",units="in",height=7,width=6,dpi=800)
+
+oceanCovar <- cbind(scale(run_time[,c("seals","oceanSalmon")],center=T))
+pca <- princomp(oceanCovar)
+summary(pca)
+pca$loadings
+run_time$ocean_interact <- pca$scores[,1]
+run_time$ocean_covar_2 <- pca$scores[,2]
 
 saveRDS(adult_run,"Data/steelhead_run.rds")
 saveRDS(run_time,"Data/steelhead_run_annual.rds")

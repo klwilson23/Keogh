@@ -1,13 +1,9 @@
-# Trevor Davies
-# Started on August 23, 2019
-# This file is to make a map of all the flow and sampling sites for 1-509
-
 # See: https://github.com/bcgov/bcmaps
 # see: https://cran.r-project.org/web/packages/bcmaps/bcmaps.pdf
 # availble layers in bcmaps:
 # https://gist.github.com/ateucher/86674e12ffba66ecce87cceb7bffbf41
-#https://github.com/poissonconsulting/fwabc#<https://github.com/poissonconsulting/fwabc>
-#https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html
+# https://github.com/poissonconsulting/fwabc#<https://github.com/poissonconsulting/fwabc>
+# https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html
 
 library(bcdata)
 library(dplyr)
@@ -21,11 +17,11 @@ library(ggrepel) # to offset labels using geom_sf_label_repel  --> Not done here
 library(riverdist) # to snap points to River --> Not done here
 library(bcmapsdata)
 library(viridis)
-# Set plot box.  Set Port McNeil as centre and box is 25km to each side
+# Set plot box.  Set Port Hardy as centre and box is 20km to each side
 plot_area1 <- bc_cities() %>%   #Extract datafram of all bc cities location
   filter(NAME == "Port Hardy") %>%
   #filter(NAME == "Port Hardy") %>%
-  st_buffer(dist = 20000)%>%    # 25000 is a decent zoom in one that covers the Keogh
+  st_buffer(dist = 20000)%>%    # 20000 is a decent zoom in one that covers the Keogh
   st_bbox() %>%                 # Turn into a square
   st_as_sfc()                   # converts to sfc object
 
@@ -37,16 +33,19 @@ rivers_in_plot_area <- bcdc_query_geodata("92344413-8035-4c08-b996-65a9b3f62fca"
 
 # Extract only the keogh river data from the plot box
 keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
+# filter the watershed down to just that of Keogh and tribs: 9208669
 keogh_watersh <- rivers_in_plot_area %>%  filter(grepl("9208669",WATERSHED_CODE_50K))
 keogh_watersh <- keogh_watersh %>%  filter(grepl(unique(keogh_r$WATERSHED_GROUP_ID),WATERSHED_GROUP_ID))
-#keogh_watersh <- rivers_in_plot_area %>%  filter(grepl(unique(keogh_r$WATERSHED_GROUP_ID),WATERSHED_GROUP_ID))
+
+# filter out the keogh river itself, so we have the tribs as one set to be plotted and the mainstem as another
+
 keogh_watersh <- keogh_watersh %>% filter(LEFT_RIGHT_TRIBUTARY!="NONE")
 
-# Set plot box.  Set Port McNeil as centre and box is 25km to each side
+# Reset plot box.  Set the Keogh Watershed as centre and box is 8.5km to each side
 plot_area1 <- keogh_watersh %>%   #Extract datafram of all bc cities location
   #filter(NAME == "Port Hardy") %>%
   #filter(NAME == "Port Hardy") %>%
-  st_buffer(dist = 8500)%>%    # 25000 is a decent zoom in one that covers the Keogh
+  st_buffer(dist = 8500)%>%    # 8500 is a decent zoom in one that covers the Keogh
   st_bbox() %>%                 # Turn into a square
   st_as_sfc()                   # converts to sfc object
 
@@ -106,19 +105,23 @@ lakes_in_plot_area <- bcdc_query_geodata("freshwater-atlas-lakes") %>%
 library(raster)
 str_name<-'~/Google Drive/SFU postdoc/Keogh river/BC_disturbance/logging_ageclass2012/logging_year.tif' 
 log_year <- raster(str_name)
+# project forestry data into map projections
 proj4string(log_year) <- CRS("+init=EPSG:3005")
+# find the map extents from the raster file, and "crop" or subset the raster, otherwise its a huge file
 ext <- extent(plot_area1[[1]][1][[1]][1:4,])
 log_year_crop <- crop(log_year,ext)
 log_year_crop@data@attributes[[1]]$Rowid <- log_year_crop@data@attributes[[1]]$ID
 logging_df <- as.data.frame(log_year_crop,xy=TRUE)
-head(logging_df)
 colnames(logging_df) <- c("x", "y","Year","count")
 logging_df$Year <- as.numeric(logging_df$Year)
 logging_df <- logging_df[complete.cases(logging_df),]
+# maniuplate logging data to bin last logged year by 10 year bins
 logging_df$Year <- round(logging_df$Year/10)*10
+# anything earlier than 1950 was last logged "Pre-1950"
 logging_df$Year <- ifelse(logging_df$Year<1950,"Pre-1950",logging_df$Year)
 logging_df$Year <- factor(logging_df$Year,levels=c("Pre-1950",sort(unique(logging_df$Year)[!grepl("Pre",unique(logging_df$Year))])))
-length(levels(logging_df$Year))
+
+## The fun part! we get to make a map
 ## Plot map -- Order of plotting MATTERS
 keogh_map <- ggplot() +
               geom_sf(data = coast_line, fill = "grey95") +                 #Plot coastline
