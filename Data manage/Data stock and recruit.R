@@ -1,4 +1,3 @@
-install.packages("labeling")
 library(reshape2)
 library(igraph)
 library(ggplot2)
@@ -739,6 +738,14 @@ sh_adults$run_year <- ifelse(sh_adults$julian>=base_date,sh_adults$year+1,sh_adu
 sh_adults <- sh_adults[sh_adults$run_year>=1976,]
 sh_adults$run_date <- ifelse((sh_adults$julian-base_date)<=0,sh_adults$julian-base_date+366,sh_adults$julian-base_date)
 
+sub_keogh <- keogh[!is.na(keogh$julian),]
+keogh_run_year <- ifelse(sub_keogh$julian>=base_date,sub_keogh$year+1,sub_keogh$year)
+keogh_base_dates <- ifelse((sub_keogh$julian-base_date)<=0,sub_keogh$julian-base_date+366,sub_keogh$julian-base_date)
+years <- sort(unique(keogh$year))
+keogh_samp_start <- sapply(years,function(x){min(keogh_base_dates[which(keogh_run_year==x & sub_keogh$trap_fishing=="TRUE")],na.rm=TRUE)})
+names(keogh_samp_start) <- years
+keogh_samp_start["1985"] <- min(keogh_base_dates[which(keogh_run_year==1985 & sub_keogh$species_code=="sha")],na.rm=TRUE)
+prop_run <- sapply(years,function(x){sum(sh_adults$run_date[sh_adults$year==x]>=keogh_samp_start[names(keogh_samp_start)==x])/length((sh_adults$run_date[sh_adults$year==x]))})
 sh_adults$sex_est <- ifelse(grepl("f",sh_adults$sex),1,ifelse(grepl("m",sh_adults$sex),0,NA))
 # create new dataframe repeating number of adults per run date:
 adult_run <- data.frame("year"=rep(sh_adults$run_year,sh_adults$number),"date"=rep(sh_adults$date,sh_adults$number),"run"=rep(sh_adults$run_date,sh_adults$number),"size"=rep(sh_adults$fork_length,sh_adults$number),"age"=rep(sh_adults$age_ocean,sh_adults$number),"sex"=rep(sh_adults$sex_est,sh_adults$number))
@@ -749,10 +756,54 @@ adult_run <- merge(adult_run,portHardy_pg[,c("date","mean_temp_run","max_temp_ru
 adult_run$cum_sum <- unlist(sapply(unique(adult_run$year),function(x){(1:sum(adult_run$year==x))/sum(adult_run$year==x)}))
 adult_run$peak <- unlist(sapply(unique(adult_run$year),function(x){rep(table(adult_run$run[adult_run$year==x])/max(table(adult_run$run[adult_run$year==x])),table(adult_run$run[adult_run$year==x]))}))
 #sh_adults$run_date <- sh_adults$run_date-min(sh_adults$run_date,na.rm=TRUE)
-run_time <- aggregate(cbind(run,size,age,peak,sex,mean_temp_run,max_temp_run,min_temp_run,total_rain_run,mean_temp_egg,total_rain_egg)~year,data=adult_run,FUN=mean,na.rm=TRUE)
 
-run_time$run_f <- aggregate(run~year,data=adult_run[adult_run$sex==1,],FUN=mean,na.rm=TRUE)$run
-run_time$run_m <- aggregate(run~year,data=adult_run[adult_run$sex==0,],FUN=mean,na.rm=TRUE)$run
+sapply(c(1977,1987,1997,2007),function(x){sum(adult_run$year==x & adult_run$run<=100)/sum(adult_run$year==x)})
+sapply(c(1977,1987,1997,2007),function(x){sum(adult_run$year==x & adult_run$run<=100)})
+sapply(c(1977,1987,1997,2007),function(x){median(adult_run$run[adult_run$year==x],na.rm=TRUE)})
+
+
+run_time <- aggregate(cbind(run,size,age,peak,sex,mean_temp_run,max_temp_run,min_temp_run,total_rain_run,mean_temp_egg,total_rain_egg)~year,data=adult_run,FUN=mean,na.rm=TRUE)
+run_time$run <- aggregate(run~year,data=adult_run,FUN=median,na.rm=TRUE)$run
+run_time$N <- aggregate(run~year,data=adult_run,FUN=length)$run
+run_time$run_f <- aggregate(run~year,data=adult_run[adult_run$sex==1,],FUN=median,na.rm=TRUE)$run
+run_time$run_m <- aggregate(run~year,data=adult_run[adult_run$sex==0,],FUN=median,na.rm=TRUE)$run
+run_time$samp_start <- keogh_samp_start[match(run_time$year,names(keogh_samp_start))]
+run_time$since_start <- run_time$run-run_time$samp_start
+run_time$prop_after_start <- prop_run[match(run_time$year,names(keogh_samp_start))]
+
+run_time$fence_samps <- run_time$prop_after_start*run_time$N
+plot(run_time$fence_samps)
+layout(matrix(1))
+jpeg("Figures/correcting run date through time.jpeg",width=5.5,height=7.5,units="in",res=800)
+layout(matrix(1:3,nrow=3))
+par(mar=c(5,5,0.1,0.1))
+plot(prop_after_start~samp_start,data=run_time[run_time$year>=1997 | run_time$year<1978,],ylim=c(0,1),xlab="Fence install date (starting Nov. 15th)",ylab="Proportion of run\n(after fence install)")
+m1 <- glm(prop_after_start~samp_start,data=run_time[run_time$year>=1997 | run_time$year<1978,],family=binomial(link="logit"),weights=run_time$N[run_time$year>=1997 | run_time$year<1978])
+curve(exp(coef(m1)[1]+coef(m1)[2]*x)/(1+exp(coef(m1)[1]+coef(m1)[2]*x)),add=TRUE)
+summary(m1)
+x1=-(coef(m1)[1]/coef(m1)[2])
+odds <- 0.75
+ybar <- (1/odds-1)
+x80=(-log(ybar)-(coef(m1)[1]))/coef(m1)[2]
+abline(v=x80)
+abline(h=odds)
+
+correction <- predict(m1,newdata = run_time,type="response")
+
+plot(since_start~samp_start,data=run_time[run_time$year>=1997 | run_time$year<1978,],xlab="Fence install date (starting Nov. 15th)",ylab="\u0394 median run and install date")
+m0 <- lm(since_start~samp_start,data=run_time[run_time$year>=1997 | run_time$year<1978,],weights=run_time$N[run_time$year>=1997 | run_time$year<1978])
+summary(m0)
+abline(m0)
+xcorrect <- predict(m0,newdata=run_time)
+run_time$run_date_corrected <- (correction*run_time$run)+(1-correction)*(xcorrect+run_time$samp_start)
+
+plot(run_time$year,run_time$run_date_corrected,ylim=c(0,190),type="b",pch=21,bg="grey50",xlab="Year",ylab="Median run date (since Nov. 15th)")
+lines(run_time$year,run_time$run,type="b",pch=21,bg="dodgerblue")
+legend("bottomright",c("Corrected","Observed"),pch=21,lty=1,col=c("black","black"),pt.bg=c("grey50","dodgerblue"),bty="n")
+dev.off()
+
+plot(samp_start~year,data=run_time)
+plot(run_time$since_start,run_time$run)
 
 jpeg("Figures/run date through time.jpeg",width=6,height=5,units="in",res=800)
 layout(1)
@@ -779,18 +830,18 @@ abline(lm(logit_surv~seals,data=run_time),lwd=2,col="red")
 plot(run_time$oceanSalmon,run_time$logit_surv,ylab="Marine survival (logit)",xlab="Pacific salmon biomass")
 abline(lm(logit_surv~oceanSalmon,data=run_time),lwd=2,col="red")
 
-plot(run_time$logit_surv,run_time$run,xlab="Marine survival (logit)",ylab="Average run date")
+plot(run_time$logit_surv,run_time$run_date_corrected,xlab="Marine survival (logit)",ylab="Average run date")
 m1 <- lm(run~logit_surv,data=run_time)
 m2 <- nls(run~Asym/(1 + exp((xmid - logit_surv))),data=run_time,start=list(Asym=140,xmid=-4))
 summary(m2)
 AIC(m1,m2)
 curve(coef(m2)["Asym"]/(1 + exp((coef(m2)["xmid"] - x))),add=TRUE,lwd=2,col="red")
 
-plot(run_time$total_rain_run,run_time$run,xlab="Mean rainfall 14 days before run (mm)",ylab="Average run date")
+plot(run_time$total_rain_run,run_time$run_date_corrected,xlab="Mean rainfall 14 days before run (mm)",ylab="Average run date")
 lines(smooth.spline(run_time$total_rain_run,run_time$run),lwd=2,col="red")
 
-plot(run_time$run,run_time$Recruits,xlab="Average run date",ylab="Smolts")
-lines(smooth.spline(run_time$run[!is.na(run_time$Recruits)],run_time$Recruits[!is.na(run_time$Recruits)],cv=TRUE),lwd=2,col="red")
+plot(run_time$run_date_corrected,run_time$Recruits,xlab="Average run date",ylab="Smolts")
+lines(smooth.spline(run_time$run_date_corrected[!is.na(run_time$Recruits)],run_time$Recruits[!is.na(run_time$Recruits)],cv=TRUE),lwd=2,col="red")
 
 plot(run_time$total_rain_egg,run_time$Recruits,xlab="Mean rainfall 30 days after run (mm)",ylab="Smolts")
 lines(smooth.spline(run_time$total_rain_egg[!is.na(run_time$Recruits)],run_time$Recruits[!is.na(run_time$Recruits)],cv=TRUE),lwd=2,col="red")
@@ -802,10 +853,12 @@ yr_run$sd <- aggregate(run~year,data=adult_run,FUN=function(x){sd(x)/mean(x)})$r
 plot(sd~year,data=yr_run)
 plot(sd~run,data=yr_run)
 adult_run$year <- factor(adult_run$year,levels=rev(unique(sort(adult_run$year))))
+run_time_year <- factor(run_time$year,levels=rev(unique(sort(run_time$year))))
 ggplot(adult_run, aes(x = run, y=as.factor(year),fill=..x..)) + 
   geom_density_ridges_gradient(scale=2.5,rel_min_height=1e-3) +
   scale_x_continuous(name="Run date (starting Nov. 15th)",expand=c(0.01,0)) +
   scale_y_discrete(expand=c(0.01,0)) +
+  geom_segment(data = run_time, aes(x = samp_start, xend = samp_start, y = as.numeric(run_time_year),yend = as.numeric(run_time_year) + 1.5),color = "black",lwd=0.5) +
   #scale_fill_viridis(name="Run time",option="C") +
   theme_ridges(font_size=13,grid=TRUE,center=TRUE) + 
   theme(axis.title.y=element_blank()) +

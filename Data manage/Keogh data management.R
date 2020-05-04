@@ -14,3 +14,5 @@ source("Data manage/Get missing data for adults.R")
 source("Data manage/Get missing data for juv cohort.R")
 # part 7 - run MARSS DLM to recover missing recruitment data from covariance with other species
 source("Data manage/Get missing data for recruitment cohorts.R")
+# part 8 - combine seal trend with NP salmon abundance trend to remove collinearity
+source("Data manage/Combine collinear variables.R")
