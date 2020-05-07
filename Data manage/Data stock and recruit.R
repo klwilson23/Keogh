@@ -893,3 +893,18 @@ run_time$ocean_covar_2 <- pca$scores[,2]
 
 saveRDS(adult_run,"Data/steelhead_run.rds")
 saveRDS(run_time,"Data/steelhead_run_annual.rds")
+
+table(fresh_ocean_ages)
+mean(adult_life$sampAge,na.rm=TRUE)
+mean(keogh$age,na.rm=TRUE)
+mean(adult_life$age_ocean,na.rm=TRUE)
+
+sum(dv_lags*dv_lags_prop)/(sum(dv_lags_prop))
+sum(dv_smolt_lags*dv_smolt_lags_prop)/(sum(dv_smolt_lags_prop))
+sum(dv_lags*dv_lags_prop)/(sum(dv_lags_prop))+sum(dv_smolt_lags*dv_smolt_lags_prop)/(sum(dv_smolt_lags_prop))
+
+
+
+sum(ct_lags*ct_lags_prop)/(sum(ct_lags_prop))
+sum(ct_smolt_lags*ct_smolt_lags_prop)/(sum(ct_smolt_lags_prop))
+sum(ct_lags*ct_lags_prop)/(sum(ct_lags_prop))+sum(ct_smolt_lags*ct_smolt_lags_prop)/(sum(ct_smolt_lags_prop))

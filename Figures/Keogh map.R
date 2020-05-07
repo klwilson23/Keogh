@@ -131,9 +131,9 @@ keogh_map <- ggplot() +
   #scale_fill_gradient2(name="Last logged year",midpoint = 1920, low="darkgreen",mid="olivedrab3",high="goldenrod1",space="Lab") +
               scale_fill_brewer(name="Last logged year",palette = "BrBG",direction=-1) +
               geom_sf(data = rivers_in_plot_area, colour = "lightblue3") +  #Plot Rivers
-              geom_sf(data = keogh_watersh, colour = "steelblue2", lwd=1) +
+              geom_sf(data = keogh_watersh, colour = "lightblue1", lwd=1) +
               geom_sf(data = lakes_in_plot_area, fill = "lightblue1") +     #Plot Lakes
-              geom_sf(data = keogh_r, colour = "steelblue2",lwd=1.5)+              #Plot Keogh R in RED
+              geom_sf(data = keogh_r, colour = "lightblue1",lwd=1.5)+              #Plot Keogh R in RED
               #geom_sf_label(data=data_point_labels[data_point_labels$Location=="Highway",],label=data_point_labels$Location[data_point_labels$Location=="Highway"],size=2)+ #Add labels
               coord_sf(expand = FALSE) +                                    #Expands box to axes
               #geom_sf(data=ocean_colour,fill='red') +                      #Plot Ocean (not working)
