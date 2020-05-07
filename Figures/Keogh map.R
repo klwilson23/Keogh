@@ -124,7 +124,7 @@ logging_df$Year <- factor(logging_df$Year,levels=c("Pre-1950",sort(unique(loggin
 ## The fun part! we get to make a map
 ## Plot map -- Order of plotting MATTERS
 keogh_map <- ggplot() +
-              geom_sf(data = coast_line, fill = "grey95") +                 #Plot coastline
+              geom_sf(data = coast_line, fill = "grey55") +                 #Plot coastline
               geom_sf(data = plot_area1, alpha = 0,colour='black') +        #Plot area box
               geom_tile(data=logging_df, aes(x=x, y=y, fill=Year), alpha=0.8) +
               #scale_fill_viridis(name = "Last logging year",option="viridis",direction=-1) +
@@ -137,18 +137,20 @@ keogh_map <- ggplot() +
               #geom_sf_label(data=data_point_labels[data_point_labels$Location=="Highway",],label=data_point_labels$Location[data_point_labels$Location=="Highway"],size=2)+ #Add labels
               coord_sf(expand = FALSE) +                                    #Expands box to axes
               #geom_sf(data=ocean_colour,fill='red') +                      #Plot Ocean (not working)
-              geom_sf_label(data=city_df[city_df$NAME=="Port Hardy",],label=city_df$NAME[city_df$NAME=="Port Hardy"]) +            #Labels
-              geom_sf_label(data=keogh_r[1,],label=keogh_r$GNIS_NAME[1],nudge_y=-3000,nudge_x=3500) +            #Labels
-              geom_sf_label(data=lakes_in_plot_area[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1),],label=lakes_in_plot_area$GNIS_NAME_1[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1)],nudge_y=-500,nudge_x=4500,label.size=0.05) + 
+              geom_sf_label(data=city_df[city_df$NAME=="Port Hardy",],label=city_df$NAME[city_df$NAME=="Port Hardy"],label.size = 0.15) +            #Labels
+              geom_sf_label(data=keogh_r[1,],label=keogh_r$GNIS_NAME[1],nudge_y=-3000,nudge_x=4500,label.size = 0.15) +            #Labels
+              geom_sf_label(data=lakes_in_plot_area[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1),],label=lakes_in_plot_area$GNIS_NAME_1[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1)],nudge_y=-500,nudge_x=4500,label.size=0.15) + 
               xlab('Longitude') + ylab('Latitude') +                        #Axis titles
               annotation_scale(location = "tr", width_hint = 0.5) +         #Rose Compass
               annotation_north_arrow(location = "tr", which_north = "true",
-                                     pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
-                                     style = north_arrow_fancy_orienteering)+
+                                     pad_x = unit(0.5, "in"), pad_y = unit(0.5, "in"),
+                                     style = north_arrow_fancy_orienteering,
+                                     height = unit(1,"cm"), width = unit(1, "cm"))+
               theme(panel.background = element_rect('lightblue1')           #Make empty space blue to colour ocean
                     , panel.grid.major = element_line('lightblue1'),
-                    legend.position="top",legend.text = element_text(size=8),legend.key.width=unit(0.75, "in"))
+                    legend.position="top",legend.text = element_text(size=6),legend.key.width=unit(0.35, "in"))
 
 keogh_map
 #Save the plot
-ggsave('Figures/keogh_map.pdf',plot=keogh_map,width = 8, height = 8,units='in',dpi=800)
+ggsave('Figures/keogh_map.pdf',plot=keogh_map,width = 6, height = 6,units='in',dpi=800)
+ggsave('Figures/keogh_map.jpeg',plot=keogh_map,width = 6, height = 6,units='in',dpi=800)
