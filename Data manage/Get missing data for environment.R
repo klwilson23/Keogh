@@ -12,7 +12,7 @@ keogh_long <- subset(keogh_long,Species!="Chum")
 keogh <- subset(keogh_long,select = c(Year,Species,Stock,Recruits,juvCohort))
 keogh <- reshape(keogh,direction = "wide",idvar="Year",timevar="Species")
 
-environment <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink,seals,npgo,mei,oceanSalmon,Logging,cumul_log,cumul_footprint,meanLogging,cumLogging))
+environment <- subset(keogh_long,select = c(Year,Species,sumTemp,sumRain,winTemp,winRain,freshCoho,freshSteel,freshCutt,freshDolly,freshPink,seals,npgo,mei,oceanSalmon,Logging,cumul_log,cumul_footprint,meanLogging,cumLogging,fertil))
 enviro <- reshape(environment,direction = "wide",idvar="Year",timevar="Species")
 
 enviroNew <- enviro
@@ -24,7 +24,7 @@ covarScale <- scale(enviro[,-1],center=TRUE,scale=TRUE)
 # get estimates of missing data from DLM analysis
 Nyears <- length(enviro$Year)
 years <- enviro$Year
-covarNames <- c("sumTemp","sumRain","winTemp","winRain","freshCoho","freshSteel","freshCutt","freshDolly","freshPink","seals","npgo","mei","oceanSalmon","Logging","cumul_log","cumul_footprint","meanLogging","cumLogging")
+covarNames <- c("sumTemp","sumRain","winTemp","winRain","freshCoho","freshSteel","freshCutt","freshDolly","freshPink","seals","npgo","mei","oceanSalmon","Logging","cumul_log","cumul_footprint","meanLogging","cumLogging","fertil")
 
 for(i in 1:length(covarNames))
 {

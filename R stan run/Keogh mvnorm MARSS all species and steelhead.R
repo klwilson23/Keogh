@@ -50,7 +50,7 @@ enviro_run <- data.frame(enviro_run)
 colnames(enviro_run) <- XXvars
 x2 <- model.matrix(~-1+total_rain_run+mean_temp_run,data=enviro_run)
 
-XXXvars <- c("meanLogging","total_rain_egg","mean_temp_egg","freshPink","fert")
+XXXvars <- c("meanLogging","total_rain_egg","mean_temp_egg","freshPink","fertil")
 sdSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:scale")
 mnSurv_prod <- attr(scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE),"scaled:center")
 enviro_prod <- scale(sh_annual[,XXXvars],center=TRUE,scale=TRUE)
@@ -61,11 +61,11 @@ x <- as.matrix(keogh_wide[,grep("Stock",colnames(keogh_wide))])
 y <- as.matrix(keogh_wide[,grep("prod",colnames(keogh_wide))])
 y[which(is.na(y),arr.ind=TRUE)] <- colMeans(y[1:10,],na.rm=TRUE)[which(is.na(y),arr.ind=TRUE)[,2]]
 
-xx1 <- scale(model.matrix(~-1+meanLogging+total_rain_egg+mean_temp_egg+freshPink+fert,data=enviro_prod),center=TRUE,scale=TRUE)
-xx2 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Dolly Varden",]),center=TRUE,scale=TRUE)
-xx3 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Cutthroat",]),center=TRUE,scale=TRUE)
+xx1 <- scale(model.matrix(~-1+meanLogging+total_rain_egg+mean_temp_egg+freshPink+fertil,data=enviro_prod),center=TRUE,scale=TRUE)
+xx2 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink+fertil,data=keogh_long[keogh_long$Species=="Dolly Varden",]),center=TRUE,scale=TRUE)
+xx3 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink+fertil,data=keogh_long[keogh_long$Species=="Cutthroat",]),center=TRUE,scale=TRUE)
 xx4 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+ocean_interact+ocean_covar_2+npgo+winTemp+winRain,data=keogh_long[keogh_long$Species=="Pink",]),center=TRUE,scale=TRUE)
-xx5 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink,data=keogh_long[keogh_long$Species=="Coho",]),center=TRUE,scale=TRUE)
+xx5 <- scale(model.matrix(~-1+meanLogging+sumTemp+sumRain+winTemp+winRain+freshPink+fertil,data=keogh_long[keogh_long$Species=="Coho",]),center=TRUE,scale=TRUE)
 
 
 # all models
@@ -106,6 +106,11 @@ init_fx <- function(chain_id)
        "beta_adults"=rep(0,dat$P))
 }
 
-fit <- stan(file="Stan code/Keogh mnorm MARSS and steelhead.stan",data=dat, iter=6000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
+fit <- stan(file="Stan code/Keogh mnorm MARSS and steelhead.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
+intervals <- c(0.1,0.9)
+summary(fit,pars=c("beta","beta_steel","beta_dolly","beta_pink","beta_coho"),probs=intervals)$summary
+summary(fit,pars=c("x0","s0","a0","r0"),probs=intervals)$summary
+summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_pro","sigma_adult_obs","sigma_run_obs","sigma_run_pro"),probs=intervals)$summary
+summary(fit,pars=c("Sigma_proc","Sigma"),probs=intervals)$summary
 
 saveRDS(fit,file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm covars.rds")

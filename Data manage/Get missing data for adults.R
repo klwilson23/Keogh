@@ -65,14 +65,17 @@ d$.fitted[x]*sdScale[matches]}),nrow=ncol(adultDat),ncol=nrow(adultDat),byrow=FA
 
 yy <- data.frame("Year"=adults$Year,t(adultDat))
 yy <- reshape2::melt(yy, id.vars=c("Year"))
-yy$Species <- d$Species
+d$Species <- factor(d$Species,levels=levels(d$Species),labels=c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho - Resistivity","Coho - NuSEDS"))
+yy$Species <- factor(d$Species,levels=levels(d$Species),labels=c("Steelhead","Dolly Varden","Cutthroat","Pink","Chum","Coho - Resistivity","Coho - NuSEDS"))
 colnames(yy) <- c("Year","variable","Abundance","Species")
 p <- ggplot(data = d) + 
   geom_line(aes(Year, .fitted)) + 
   geom_ribbon(aes(x = Year, ymin = .conf.low, ymax = .conf.up), linetype = 2, alpha = 0.5)
 p <- p + geom_point(data = yy, mapping = aes(x = Year, y = Abundance))
-p <- p + facet_wrap(~Species) + xlab("") + ylab("Abundance")
+p <- p + facet_wrap(~Species) + xlab("") + ylab("Standardized abundance")
 print(p)
+
+ggsave("Figures/Adult missing data.jpeg",plot=p,dpi=800,units="in",height=5,width=7)
 
 adultEst <- data.frame("Year"=adultNew$Year,adultFits)
 adultNew[which(is.na(adultNew),arr.ind=TRUE)] <- adultEst[which(is.na(adultNew),arr.ind=TRUE)]

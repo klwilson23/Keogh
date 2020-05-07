@@ -326,7 +326,7 @@ keogh_long <- example
 
 seals <- rep(NA,nrow(keogh_long))
 names(seals) <- keogh_long$Year
-cumul_logging <- mean_logging <- sumTemp <- sumRain <- winTemp <- winRain <- freshCoho <- freshSteel <- freshCutt <- freshDolly <- freshPink <- npgo <- oceanSalmon <- mei <- seals
+fert <- cumul_logging <- mean_logging <- sumTemp <- sumRain <- winTemp <- winRain <- freshCoho <- freshSteel <- freshCutt <- freshDolly <- freshPink <- npgo <- oceanSalmon <- mei <- seals
 
 for(i in 1:nrow(keogh_long))
 {
@@ -358,6 +358,7 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
     
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
@@ -377,7 +378,7 @@ for(i in 1:nrow(keogh_long))
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
     seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
-    
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
     # lag ocean condition backwards from spawning year
     if(any(as.numeric(row.names(prop_adults_year)) %in% keogh_long$Year[i])){
       year_matches <- match(keogh_long$Year[i] - as.integer(colnames(prop_adults_year)),keogh_long$Year,nomatch=0)
@@ -422,6 +423,8 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
+    
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
     Cutty <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Cutthroat"][pink_matches[1:x]],na.rm=TRUE)})
@@ -439,6 +442,7 @@ for(i in 1:nrow(keogh_long))
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
 
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - adultLag,keogh_long$Year,nomatch=0)
@@ -470,6 +474,8 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
+    
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
     Cutty <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Cutthroat"][pink_matches[1:x]],na.rm=TRUE)})
@@ -487,6 +493,7 @@ for(i in 1:nrow(keogh_long))
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
     seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - dv_smolt_lags,keogh_long$Year,nomatch=0)
@@ -516,6 +523,8 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
+    
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
     Cutty <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Cutthroat"][pink_matches[1:x]],na.rm=TRUE)})
@@ -533,6 +542,8 @@ for(i in 1:nrow(keogh_long))
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
+    
     seals[i] <- sum(props * keogh_long$seal_density[i],na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
@@ -567,6 +578,8 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
+    
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
     Cutty <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Cutthroat"][pink_matches[1:x]],na.rm=TRUE)})
@@ -584,6 +597,7 @@ for(i in 1:nrow(keogh_long))
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - adultLag,keogh_long$Year,nomatch=0)
@@ -615,6 +629,8 @@ for(i in 1:nrow(keogh_long))
     win_rain <- sapply(lags,function(x){mean(keogh_long$win_rain[year_matches[1:x]],na.rm=TRUE)})
     cum_log <- sapply(lags,function(x){mean(keogh_long$cumul_footprint[year_matches[1:x]],na.rm=TRUE)})
     mn_log <- sapply(lags,function(x){mean(keogh_long$cumul_log[year_matches[1:x]],na.rm=TRUE)})
+    fertil <- sapply(lags,function(x){mean(keogh_long$fert[year_matches[1:x]],na.rm=TRUE)})
+    
     Coho <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Coho"][pink_matches[1:x]],na.rm=TRUE)})
     Steel <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Steelhead"][pink_matches[1:x]],na.rm=TRUE)})
     Cutty <- sapply(lags,function(x){mean(keogh_long$Recruits[keogh_long$Species=="Cutthroat"][pink_matches[1:x]],na.rm=TRUE)})
@@ -632,6 +648,7 @@ for(i in 1:nrow(keogh_long))
     freshPink[i]<- sum(props * Pink,na.rm=TRUE)
     cumul_logging[i] <- sum(props * cum_log,na.rm=TRUE)
     mean_logging[i] <- sum(props * mn_log,na.rm=TRUE)
+    fert[i] <- sum(props * fertil,na.rm=TRUE)
     
     # lag ocean condition backwards from spawning year
     year_matches <- match(keogh_long$Year[i] - adultLag,keogh_long$Year,nomatch=0)
@@ -663,6 +680,7 @@ keogh_long$mei <- ifelse(mei==0,NA,mei)
 keogh_long$oceanSalmon <- ifelse(oceanSalmon==0,NA,oceanSalmon)
 keogh_long$meanLogging <- ifelse(mean_logging==0,NA,mean_logging)
 keogh_long$cumLogging <- ifelse(cumul_logging==0,NA,cumul_logging)
+keogh_long$fertil <- fert
 
 
 plot(log(Recruits/Stock)~log(cumul_footprint),data=keogh_long[keogh_long$Species=="Dolly Varden",],pch=21,bg=ifelse(Year>=1990,"orange","dodgerblue"))
