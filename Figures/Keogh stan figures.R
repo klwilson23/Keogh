@@ -152,7 +152,9 @@ for(k in spp_ord)
 {
   for(j in (spp_ord)[(spp_ord)!=k])
   {
-    r[k,j] <- mean(apply(ppd,1,function(x){cor(x[,k],x[,j])}))
+    k.i=which(unique(keogh_long$Species)[k]==spp_ord_fact)
+    j.i=which(unique(keogh_long$Species)[j]==spp_ord_fact)
+    r[k.i,j.i] <- median(apply(ppd,1,function(x){cor(x=x[,k],y=x[,j])}))
     spp1 <- as.character(unique(keogh_long$Species)[k])
     spp2 <- as.character(unique(keogh_long$Species)[j])
     xlabel <- bquote(alpha[.(spp1)])
