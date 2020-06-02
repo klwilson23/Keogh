@@ -55,7 +55,6 @@ megaPlot_Annotated <- annotate_figure(megaPlot,bottom=text_grob(wrapper("Changin
 megaPlot_Annotated
 ggsave("Changing marine and freshwater environments.jpeg",plot=megaPlot_Annotated,units="in",height=6,width=8,dpi=800)
 
-
 # make plot of environment
 wesAnderson <- "Darjeeling1"
 keogh <- readRDS("Keogh_newRec_enviro.rds")
@@ -90,3 +89,33 @@ megaP <- ggarrange(p1,p2,ncol=1,nrow=2,legend="top",common.legend=TRUE)
 pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Recruits and spawners since 1976 on the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
 
 ggsave("Figures/stock and recruitment trends.jpeg",plot=pAnnotated,units="in",height=6,width=9,dpi=800)
+
+# compare with BC time-series
+keogh <- readRDS("Keogh_newRec_enviro.rds")
+keogh_adults <- keogh[,c("Year","Species","Stock")]
+keogh_adults$Population <- "Keogh"
+colnames(keogh_adults) <- c("Year","Species","Numbers","Population")
+bc_steelhead <- read.csv("Data/Steelhead time-series Thompson-Chilcotin.csv",header=TRUE)
+bc_steelhead$Species <- "Steelhead"
+bc_all <- merge(bc_steelhead,keogh_adults,all=TRUE,by=c("Year","Species","Numbers","Population"))
+
+bc_scale <-  bc_all %>%
+              group_by(Species,Population) %>%
+              mutate(
+                Numbers = as.numeric(Numbers),
+                scaled = (Numbers-mean(Numbers)) / sd(Numbers),
+                idx = 1:n())
+
+margins <- c(0.5,0.5,0.5,1.1)
+pBC <- ggplot(bc_scale[bc_scale$Species=="Steelhead",], aes(x = Year, y = scaled)) + 
+  geom_line(aes(color=Population),size=1.05) +
+  labs(x="Year",y="Standardized adult abundance",color="Population") +
+  scale_color_manual(values = adjustcolor(c("dodgerblue", "grey40", "orange"),alpha=0.7)) +
+  #scale_color_brewer(palette="BrBG") +
+  theme_minimal() +
+  theme(legend.position="none",plot.margin=unit(margins,"line"),strip.text=element_text(hjust=0)) +   ggtitle("Steelhead trends across British Columbia")
+pBC
+megaBC <- ggarrange(pBC,ncol=1,nrow=1,legend="top",common.legend=TRUE,labels="")
+megaBC_Annotated <- annotate_figure(megaBC,bottom=text_grob(wrapper("Adult steelhead returns in the Chilcotin, Thompson, and Keogh Rivers through time. In 2018, the Committee on the Status of Endangered Wildlife in Canada (COSEWIC) performed an emergency assessment of both the Thompson and Chilcotin Steelhead Trout populations and found them to be endangered.",width=115),color="black",hjust=0,x=0.01,face="italic",size=10))
+megaBC_Annotated
+ggsave("Figures/British Columbia steelhead.jpeg",plot=megaBC_Annotated,units="in",height=6,width=8,dpi=800)
