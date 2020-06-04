@@ -17,6 +17,7 @@ library(ggrepel) # to offset labels using geom_sf_label_repel  --> Not done here
 library(riverdist) # to snap points to River --> Not done here
 library(bcmapsdata)
 library(viridis)
+
 # Set plot box.  Set Port Hardy as centre and box is 20km to each side
 plot_area1 <- bc_cities() %>%   #Extract datafram of all bc cities location
   filter(NAME == "Port Hardy") %>%
@@ -37,8 +38,6 @@ keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
 keogh_watersh <- rivers_in_plot_area %>%  filter(grepl("9208669",WATERSHED_CODE_50K))
 keogh_watersh <- keogh_watersh %>%  filter(grepl(unique(keogh_r$WATERSHED_GROUP_ID),WATERSHED_GROUP_ID))
 
-# filter out the keogh river itself, so we have the tribs as one set to be plotted and the mainstem as another
-
 keogh_watersh <- keogh_watersh %>% filter(LEFT_RIGHT_TRIBUTARY!="NONE")
 
 # Reset plot box.  Set the Keogh Watershed as centre and box is 8.5km to each side
@@ -48,6 +47,21 @@ plot_area1 <- keogh_watersh %>%   #Extract datafram of all bc cities location
   st_buffer(dist = 8500)%>%    # 8500 is a decent zoom in one that covers the Keogh
   st_bbox() %>%                 # Turn into a square
   st_as_sfc()                   # converts to sfc object
+
+keogh_poly <-  bcdc_query_geodata("WHSE_BASEMAPPING.FWA_WATERSHEDS_POLY") %>%
+  filter(WITHIN(plot_area1)) %>%
+  collect() %>%                           #Extracts the data
+  filter(WATERSHED_GROUP_ID ==160) %>%
+  filter(grepl("920-866395",FWA_WATERSHED_CODE)) %>%
+  st_intersection(plot_area1)
+
+keogh_poly$LOCAL_WATERSHED_CODE
+keogh_poly$FWA_WATERSHED_CODE
+keogh_poly$LOCAL_WATERSHED_ORDER
+keogh_poly$FEATURE_CODE
+keogh_r$FWA_WATERSHED_CODE
+# filter out the keogh river itself, so we have the tribs as one set to be plotted and the mainstem as another
+
 
 ###--------------    Read in my data ###########
 # data1 <- read.csv('sample_location_2018.csv', stringsAsFactors = FALSE) %>% filter(Habitat !="Flow") %>% mutate(UTM_W=as.numeric(UTM_W),UTM_N=as.numeric(UTM_N))
@@ -124,22 +138,24 @@ logging_df$Year <- factor(logging_df$Year,levels=c("Pre-1950",sort(unique(loggin
 ## The fun part! we get to make a map
 ## Plot map -- Order of plotting MATTERS
 keogh_map <- ggplot() +
-              geom_sf(data = coast_line, fill = "grey55") +                 #Plot coastline
+              geom_sf(data = coast_line, fill = "grey90") +                 #Plot coastline
+              geom_sf(data = keogh_poly, fill ="grey40",lty=0) +
               geom_sf(data = plot_area1, alpha = 0,colour='black') +        #Plot area box
               geom_tile(data=logging_df, aes(x=x, y=y, fill=Year), alpha=0.8) +
               #scale_fill_viridis(name = "Last logging year",option="viridis",direction=-1) +
   #scale_fill_gradient2(name="Last logged year",midpoint = 1920, low="darkgreen",mid="olivedrab3",high="goldenrod1",space="Lab") +
-              scale_fill_brewer(name="Last logged year",palette = "BrBG",direction=-1) +
+              scale_fill_manual(name="Last logged year",values=c("#1b7837","#7fbf7b","#01665e","#5ab4ac","#762a83","#d8b365","#8c510a")) +
+              #scale_fill_brewer(name="Last logged year",palette = "Paired",direction=-1) +
               geom_sf(data = rivers_in_plot_area, colour = "lightblue3") +  #Plot Rivers
-              geom_sf(data = keogh_watersh, colour = "dodgerblue2", lwd=1) +
+              geom_sf(data = keogh_watersh, colour = "lightblue3") +
               geom_sf(data = lakes_in_plot_area, fill = "lightblue1") +     #Plot Lakes
-              geom_sf(data = keogh_r, colour = "dodgerblue2",lwd=1.5)+              #Plot Keogh R in RED
+              geom_sf(data = keogh_r, colour = "lightblue3")+              #Plot Keogh R in RED
               #geom_sf_label(data=data_point_labels[data_point_labels$Location=="Highway",],label=data_point_labels$Location[data_point_labels$Location=="Highway"],size=2)+ #Add labels
               coord_sf(expand = FALSE) +                                    #Expands box to axes
               #geom_sf(data=ocean_colour,fill='red') +                      #Plot Ocean (not working)
-              geom_sf_label(data=city_df[city_df$NAME=="Port Hardy",],label=city_df$NAME[city_df$NAME=="Port Hardy"],label.size = 0.15) +            #Labels
-              geom_sf_label(data=keogh_r[1,],label=keogh_r$GNIS_NAME[1],nudge_y=-3000,nudge_x=4500,label.size = 0.15) +            #Labels
-              geom_sf_label(data=lakes_in_plot_area[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1),],label=lakes_in_plot_area$GNIS_NAME_1[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1)],nudge_y=-500,nudge_x=4500,label.size=0.15) + 
+              #geom_sf_label(data=city_df[city_df$NAME=="Port Hardy",],label=city_df$NAME[city_df$NAME=="Port Hardy"],label.size = 0.15) +            #Labels
+              #geom_sf_label(data=keogh_r[1,],label=keogh_r$GNIS_NAME[1],nudge_y=-3000,nudge_x=4500,label.size = 0.15) +            #Labels
+              #geom_sf_label(data=lakes_in_plot_area[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1),],label=lakes_in_plot_area$GNIS_NAME_1[grepl("Keogh",lakes_in_plot_area$GNIS_NAME_1)],nudge_y=-500,nudge_x=4500,label.size=0.15) + 
               xlab('Longitude') + ylab('Latitude') +                        #Axis titles
               annotation_scale(location = "tr", width_hint = 0.5) +         #Rose Compass
               annotation_north_arrow(location = "tr", which_north = "true",
