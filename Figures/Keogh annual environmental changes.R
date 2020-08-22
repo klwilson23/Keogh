@@ -33,7 +33,7 @@ lines(sc_enviro$Year,sc_enviro$cumul_log,lwd=1,col="forestgreen",lty=2)
 lines(sc_enviro$Year,sc_enviro$win_rain,lwd=1,col="forestgreen",lty=3)
 
 df_mar <- sc_enviro %>%
-  select(Year, seal_density, npgo, total,win_mean_temp, win_rain, cumul_log) %>%
+  dplyr::select(Year, seal_density, npgo, total,win_mean_temp, win_rain, cumul_log) %>%
   gather(key = "variable", value = "value", -Year)
 df_mar$variable <- factor(df_mar$variable,levels=c("seal_density","npgo","total","win_mean_temp", "win_rain", "cumul_log"),labels=c("Seal densities","North Pacific Gyre Oscillations","North Pacific salmon biomass","Winter air temperatures","Winter rainfall","Cumulative logging (15 year window)"))
 mar_labs <- c("Seal densities","North Pacific Gyre Oscillations","North Pacific salmon biomass","Winter air temperatures","Winter rainfall","Cumulative logging (15 year window)")
@@ -119,3 +119,19 @@ megaBC <- ggarrange(pBC,ncol=1,nrow=1,legend="top",common.legend=TRUE,labels="")
 megaBC_Annotated <- annotate_figure(megaBC,bottom=text_grob(wrapper("Adult steelhead returns in the Chilcotin, Thompson, and Keogh Rivers through time. In 2018, the Committee on the Status of Endangered Wildlife in Canada (COSEWIC) performed an emergency assessment of both the Thompson and Chilcotin Steelhead Trout populations and found them to be endangered.",width=115),color="black",hjust=0,x=0.01,face="italic",size=10))
 megaBC_Annotated
 ggsave("Figures/British Columbia steelhead.jpeg",plot=megaBC_Annotated,units="in",height=6,width=8,dpi=800)
+
+steely <- bc_all[bc_all$Species=="Steelhead",]
+keogh_steel <- steely[steely$Population=="Keogh",]
+th_steel <- steely[steely$Population=="Thompson",]
+chil_steel <- steely[steely$Population=="Chilcotin",]
+keogh_st <- ts.intersect(as.ts(keogh_steel$Numbers),as.ts(chil_steel$Numbers),as.ts(th_steel$Numbers))[,1]
+th_st <- ts.intersect(as.ts(keogh_steel$Numbers),as.ts(chil_steel$Numbers),as.ts(th_steel$Numbers))[,2]
+chil_st <- ts.intersect(as.ts(keogh_steel$Numbers),as.ts(chil_steel$Numbers),as.ts(th_steel$Numbers))[,3]
+ccf(keogh_st,th_st)
+ccf(keogh_st,chil_st)
+ccf(th_st,chil_st)
+library(biwavelet)
+coh <- biwavelet::wtc(cbind(keogh_steel$Year,keogh_st),cbind(keogh_steel$Year,chil_st))
+print(coh)
+coh$rsq
+plot(coh)

@@ -66,7 +66,8 @@ proj4string(log_year) <- CRS("+init=EPSG:3005")
 layout(1)
 plot(log_year)
 points(keogh_points,type="l",cex=3)
-
+logging_year <- data.frame(log_year@data@attributes[[1]])
+plot(logging_year$ID,logging_year$COUNT,xlim=c(1900,2020))
 log_max <- extract(log_year,             # raster layer
                    keogh_points[1,1:2],   # SPDF with centroids for buffer
                    buffer = 10000,     # buffer size, units depend on CRS

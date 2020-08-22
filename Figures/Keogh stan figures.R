@@ -14,6 +14,7 @@ library(corrplot)
 fit <- readRDS(file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm covars.rds")
 ptSize <- 0.7
 txtSize <- 0.9
+target <- 0.8 # how much of the posterior mass are we okay being > or < 0 to draw inference
 spp_ord <- c(2,1,3,5,4)
 spp_ord_fact <- c("Dolly Varden","Steelhead","Cutthroat","Coho","Pink")
 
@@ -119,6 +120,18 @@ colSums(betas>0)/nrow(betas)
 betas <- rstan::extract(fit)$beta_run
 colSums(betas>0)/nrow(betas)
 betas <- rstan::extract(fit)$beta_steel
+colSums(betas>0)/nrow(betas)
+
+# species
+betas <- rstan::extract(fit)$beta_dolly
+colSums(betas>0)/nrow(betas)
+betas <- rstan::extract(fit)$beta_steel
+colSums(betas>0)/nrow(betas)
+betas <- rstan::extract(fit)$beta_cutt
+colSums(betas>0)/nrow(betas)
+betas <- rstan::extract(fit)$beta_coho
+colSums(betas>0)/nrow(betas)
+betas <- rstan::extract(fit)$beta_pink
 colSums(betas>0)/nrow(betas)
 
 pro_corr <- rstan::extract(fit)$Omega_proc
@@ -261,7 +274,7 @@ for(k in spp_ord)
     points(mean(betas[,j])/sd(dat$y[,k]),counter,type="p",pch=21,bg="dodgerblue",xpd=NA)
     segments(x0=quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[1]),x1=quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[2]),y0=counter,lwd=2,xpd=NA)
     axis(2,at=counter,labels=xnames[j],tick=FALSE,las=1,line=0, cex.axis=0.9*txtSize)
-    ifelse((quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[1])*quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[2]))>0,pch_color <- "red",pch_color<-"grey50")
+    ifelse((sum((betas[,j]/sd(dat$y[,k]))>0)/length(betas[,j])>target) | (sum((betas[,j]/sd(dat$y[,k]))<0)/length(betas[,j])>target),pch_color <- "red",pch_color<-"grey50")
     points(mean(betas[,j])/sd(dat$y[,k]),counter,pch=21,bg=pch_color,xpd=NA)
     counter <- counter - 1
   } 
@@ -405,7 +418,9 @@ Corner_text("(a)","topleft")
 betas <- rstan::extract(fit)$beta_surv
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y1_obs)
 colnames(std_eff) <- c("Ocean interactions","NPGO","Ocean PCA-2")
-pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+#pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
+
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
 axis(2,line=0)
@@ -433,7 +448,8 @@ Corner_text("(c)","topleft")
 betas <- rstan::extract(fit)$beta_adults
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/log(sd(dat$x[,1]))
 colnames(std_eff) <- c("Marine survival","Smolt cohort")
-pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+#pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
@@ -461,7 +477,7 @@ Corner_text("(e)","topleft")
 betas <- rstan::extract(fit)$beta_run
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y2)
 colnames(std_eff) <- c("ln(Adults)","Rainfall","Temp.")
-pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
@@ -490,7 +506,8 @@ betas <- rstan::extract(fit)$beta_steel
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y[,1])
 #colnames(std_eff) <- c("Cumulative logging","Summer temp.","Summer rain","Winter temp.","Winter rain","Pink salmon in early life","Spawn date")
 colnames(std_eff) <- c("Logging","Rainfall","Temp.","Pinks","Fert.","Spawn date")
-pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+#pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
+pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 #axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=0.7*txtSize)
