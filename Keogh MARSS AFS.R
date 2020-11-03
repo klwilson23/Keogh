@@ -50,7 +50,7 @@ pk_Adults.hat <- pmax(1e-4,ifelse(is.na(keogh$pk_Adults),adultFits[,4],keogh$pk_
 
 # get estimates of adult densities from DFA analysis:
 # run a DFA on the standardized adult data
-adultDat <- keogh[,c("sh_Adults","dv_Adults","ct_Adults","pk_Adults","co_Adults")]
+adultDat <- keogh[,c("Stock.Steelhead","Stock.Dolly Varden","Stock.Cutthroat","Stock.Pink","Stock.Coho")]
 sdScale <- attr(scale(adultDat,center=FALSE,scale=TRUE),"scaled:scale")
 adultDat <- scale(adultDat,center=FALSE,scale=TRUE)
 
@@ -64,6 +64,9 @@ U <- "zero"
 A <- "unequal"
 x0 <- "zero"
 mod.list = list(B=B, Q=Q, R=R, U=U, x0=x0, A=A,tinitx = 1)
+
+mod.list.noTime = list(B = matrix(1), U = "zero", Q = "zero", 
+                       Z = matrix(1,ns,1), A = "zero", R = "diagonal and equal", x0 = matrix("mu"))
 
 # DFA model
 nTrends <- 2
@@ -85,6 +88,10 @@ mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
 fit <- MARSS(adultDat, model=mod.list, control=list(minit=200,maxit=50000+200), inits=list(A=matrix(m,ns,1)))
 
+fit <- MARSS(adultDat, model=mod.list.noTime, control=list(minit=200,maxit=50000+200))
+summary(fit)
+print(fit)
+plot(fit)
 d <- augment(fit, interval = "confidence")
 d$Year <- d$t + 1975
 d$Species <- d$.rownames
