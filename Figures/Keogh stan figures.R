@@ -490,15 +490,27 @@ Corner_text("(f)","topleft")
 
 # productivity
 ppd <- rstan::extract(fit)$y_ppd[,,1]
-ci <- apply(ppd,2,quantile,probs=intervals)
-plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2,xlab="",ylab="",xaxt="n")
-mtext("Smolt productivity (ln R/S)",2,line=2,xpd=NA,cex=0.8*txtSize)
+k=1
+j=2
+mus <- rstan::extract(fit)$mu
+runtime <- rstan::extract(fit)$pred_run
+runtime <- apply(runtime,1,FUN=function(x){(x-mean(x))/sd(x)})
+runtime <- rowMeans(runtime)
+betas <- rstan::extract(fit)$beta_steel
+xx <- data.frame(xx1,runtime)
+dens_ind <- rstan::extract(fit)$x0[,,1] - sapply(dat$x[,k],FUN=function(x){x*rstan::extract(fit)$beta[,k]})
+resid_alphas <- (ppd - dens_ind)
+ci <- apply(resid_alphas,2,quantile,probs=intervals)
+
+#ci <- apply(ppd,2,quantile,probs=intervals)
+plot(colMeans(resid_alphas),ylim=range(ci),type="l",lwd=2,xlab="",ylab="",xaxt="n")
+mtext("Residual productivity (\u0394ln R/S)",2,line=2,xpd=NA,cex=0.8*txtSize)
 axis(1,labels=FALSE,tick=TRUE)
 polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adjustcolor("orange",0.5),border=NA)
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
 polygon(c(regime2:40,rev(regime2:40)),c(ci[1,regime2:40],rev(ci[2,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
-lines(colMeans(ppd),lwd=2)
-points(dat$y[,1],pch=21,bg="grey50")
+lines(colMeans(resid_alphas),lwd=2)
+points(dat$y[,k]-colMeans(dens_ind),pch=21,bg="grey50")
 Corner_text("(g)","topleft")
 
 # some effects on productivity
