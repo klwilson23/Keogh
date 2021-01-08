@@ -53,7 +53,7 @@ p1
 megaPlot <- ggarrange(p1,ncol=1,nrow=1,legend="top",common.legend=TRUE,labels="")
 megaPlot_Annotated <- annotate_figure(megaPlot,bottom=text_grob(wrapper("Changing marine and freshwater environments in the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
 megaPlot_Annotated
-ggsave("Changing marine and freshwater environments.jpeg",plot=megaPlot_Annotated,units="in",height=6,width=8,dpi=800)
+ggsave("Changing marine and freshwater environments.jpeg",plot=megaPlot,units="in",height=6,width=8,dpi=800)
 
 # make plot of environment
 wesAnderson <- "Darjeeling1"
@@ -68,33 +68,42 @@ Nspecies <- length(unique(keogh_long$Species))
 
 margins <- c(0.5,0.5,0.5,1.1)
 p1 <- ggplot(data = keogh_long) + 
-  geom_line(aes(x=Year, y=Recruits,colour=Species)) +
-  geom_point(aes(x=Year, y=Recruits,colour=Species)) +
-  #geom_smooth(data=keogh_long,aes(x=Year, y=Recruits))+
+  geom_line(aes(x=Year, y=Recruits),colour=1) +
+  geom_point(aes(x=Year, y=Recruits),colour=1,pch=21,bg='grey50') +
+  #geom_smooth(data=keogh_long,aes(x=Year, y=Stock))+
   xlab("Year") + ylab("Recruits") +
   facet_wrap(~Species,scales="free") +
-  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  #scale_color_brewer(type="qual",palette=5) +
   theme_minimal() +
-  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
+  theme(legend.position="none",strip.text.x = element_text(hjust=0),plot.margin=unit(margins,"line"))
 p2 <- ggplot(data = keogh_long) + 
-  geom_line(aes(x=Year, y=Stock,colour=Species)) +
-  geom_point(aes(x=Year, y=Stock,colour=Species)) +
+  geom_line(aes(x=Year, y=Stock),colour=1) +
+  geom_point(aes(x=Year, y=Stock),colour=1,pch=21,bg='grey50') +
   #geom_smooth(data=keogh_long,aes(x=Year, y=Stock))+
   xlab("Year") + ylab("Adults") +
   facet_wrap(~Species,scales="free") +
-  scale_colour_manual(values=wes_palette(n=Nspecies, name=wesAnderson)) +
+  #scale_color_brewer(type="qual",palette=5) +
   theme_minimal() +
-  theme(legend.position="none",strip.text.x = element_blank(),plot.margin=unit(margins,"line"))
-megaP <- ggarrange(p1,p2,ncol=1,nrow=2,legend="top",common.legend=TRUE)
+  theme(legend.position="none",strip.text.x = element_text(hjust=0),plot.margin=unit(margins,"line"))
+megaP <- ggarrange(p1,p2,ncol=1,nrow=2,legend="none",common.legend=FALSE)
 pAnnotated <- annotate_figure(megaP,bottom=text_grob(wrapper("Recruits and spawners since 1976 on the Keogh River",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
 
-ggsave("Figures/stock and recruitment trends.jpeg",plot=pAnnotated,units="in",height=6,width=9,dpi=800)
+ggsave("Figures/stock and recruitment trends.jpeg",plot=megaP,units="in",height=6,width=9,dpi=800)
 
 # compare with BC time-series
-keogh <- readRDS("Keogh_newRec_enviro.rds")
+#keogh <- readRDS("Keogh_newRec_enviro.rds")
 keogh_adults <- keogh[,c("Year","Species","Stock")]
+keogh_adults <- read.csv("Data/Keogh sh adults.csv",stringsAsFactors=F,header=T)
+keogh_adults$Species <- factor("Steelhead")
 keogh_adults$Population <- "Keogh"
-colnames(keogh_adults) <- c("Year","Species","Numbers","Population")
+colnames(keogh_adults) <- c("Year","Numbers","Species","Population")
+
+keogh_adults[keogh_adults$Year==2018,"Numbers"] <- 24
+keogh_adults <- rbind(keogh_adults,data.frame("Year"=c(2019,2020),"Species"="Steelhead","Numbers"=NA,"Population"="Keogh"))
+keogh_adults[keogh_adults$Year==2019,"Numbers"] <- 25
+keogh_adults[keogh_adults$Year==2020,"Numbers"] <- 10
+keogh_adults <- keogh_adults[!is.na(keogh_adults$Numbers),]
+
 bc_steelhead <- read.csv("Data/Steelhead time-series Thompson-Chilcotin.csv",header=TRUE)
 bc_steelhead$Species <- "Steelhead"
 bc_all <- merge(bc_steelhead,keogh_adults,all=TRUE,by=c("Year","Species","Numbers","Population"))
@@ -118,7 +127,7 @@ pBC
 megaBC <- ggarrange(pBC,ncol=1,nrow=1,legend="top",common.legend=TRUE,labels="")
 megaBC_Annotated <- annotate_figure(megaBC,bottom=text_grob(wrapper("Adult steelhead returns in the Chilcotin, Thompson, and Keogh Rivers through time. In 2018, the Committee on the Status of Endangered Wildlife in Canada (COSEWIC) performed an emergency assessment of both the Thompson and Chilcotin Steelhead Trout populations and found them to be endangered.",width=115),color="black",hjust=0,x=0.01,face="italic",size=10))
 megaBC_Annotated
-ggsave("Figures/British Columbia steelhead.jpeg",plot=megaBC_Annotated,units="in",height=6,width=8,dpi=800)
+ggsave("Figures/British Columbia steelhead.jpeg",plot=megaBC,units="in",height=6,width=8,dpi=800)
 
 steely <- bc_all[bc_all$Species=="Steelhead",]
 keogh_steel <- steely[steely$Population=="Keogh",]
@@ -131,7 +140,7 @@ ccf(keogh_st,th_st)
 ccf(keogh_st,chil_st)
 ccf(th_st,chil_st)
 library(biwavelet)
-coh <- biwavelet::wtc(cbind(keogh_steel$Year,keogh_st),cbind(keogh_steel$Year,chil_st))
+coh <- biwavelet::wtc(cbind(1:41,keogh_st),cbind(1:41,th_st))
 print(coh)
 coh$rsq
-plot(coh)
+plot(coh,plot.cb=TRUE,plot.phase=TRUE)

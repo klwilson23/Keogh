@@ -803,8 +803,8 @@ x1=-(coef(m1)[1]/coef(m1)[2])
 odds <- 0.75
 ybar <- (1/odds-1)
 x80=(-log(ybar)-(coef(m1)[1]))/coef(m1)[2]
-abline(v=x80)
-abline(h=odds)
+#abline(v=x80)
+#abline(h=odds)
 
 correction <- predict(m1,newdata = run_time,type="response")
 

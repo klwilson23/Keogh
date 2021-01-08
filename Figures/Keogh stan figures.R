@@ -191,21 +191,32 @@ corrplot.mixed(r,upper="ellipse",lower.col="black",tl.col="black",upper.col = co
 dev.off()
 
 # productivity
-jpeg("Figures/Keogh productivity stan marss.jpeg",width=8,height=8,units="in",res=800)
-matLayout <- matrix(c(1:5,0),nrow=3,ncol=2,byrow=TRUE)
+jpeg("Figures/Keogh productivity stan marss.jpeg",width=6.5,height=6.5,units="in",res=800)
+regime <- which(sh_annual==1991)
+regime2 <- which(sh_annual==2008)
+matLayout <- matrix(1:5,nrow=5,ncol=1,byrow=TRUE)
 layout(matLayout)
-par(mar=c(5,4,1,1))
+par(mar=c(0,0,0,0),mai=c(0.1,0,0,0),oma=c(4,4,0.1,0))
 ppd <- rstan::extract(fit)$y_ppd
 mns <- apply(ppd,c(3,2),median)
 ci <- apply(ppd,c(3,2),quantile,probs=intervals)
 for(k in spp_ord)
 {
-  plot(mns[k,],ylim=range(ci[,k,]),type="l",lwd=2,xlab="Year",ylab="Smolt productivity (ln R/S)",xaxt="n")
-  axis(1,labels=NULL,tick=TRUE)
-  polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,k,],rev(ci[2,k,])),col=adjustcolor("dodgerblue",0.3),border=NA)
-  points(dat$y[,k],pch=21,bg="orange")
+  plot(mns[k,],ylim=range(ci[,k,]),type="l",lwd=2,xlab="Year",ylab="",xaxt="n")
+  mtext("Productivity (ln R/S)",side=2,line=2.25,cex=0.9*txtSize)
+  axis(1,labels=FALSE,tick=TRUE)
+  polygon(c(1:regime,rev(1:regime)),c(ci[1,k,1:regime],rev(ci[2,k,1:regime])),col=adjustcolor("orange",0.5),border=NA)
+  polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,k,regime:regime2],rev(ci[2,k,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
+  polygon(c(regime2:40,rev(regime2:40)),c(ci[1,k,regime2:40],rev(ci[2,k,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
+  lines(mns[k,],lwd=2,col="black")
+  points(dat$y[,k],pch=21,bg="grey50")
   Corner_text(unique(keogh_long$Species)[k],"topleft")
+  if(k==spp_ord[5])
+  {
+    legend("bottomleft",c("Early","Compensation","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=1.05*txtSize)
+  }
 }
+axis(1,at=seq(from=0,to=dat$N,length=5),labels=seq(from=min(sh_annual$year)-1,to=max(sh_annual$year),length=5),tick=FALSE)
 dev.off()
 
 # productivity
