@@ -1,5 +1,5 @@
 source("some functions.R")
-keogh <- readRDS("Keogh_newRec_enviro.rds")
+keogh <- readRDS("Data/Keogh_newRec_enviro.rds")
 ocean_interact <- ocean_interact_2 <- rep(NA,nrow(keogh))
 counter <- 1
 for(i in unique(keogh$Species))
@@ -17,7 +17,7 @@ for(i in unique(keogh$Species))
 keogh$ocean_interact <- ocean_interact
 keogh$ocean_covar_2 <- ocean_interact_2
 
-saveRDS(keogh,"Keogh_collinear_enviro.rds")
+saveRDS(keogh,"Data/Keogh_collinear_enviro.rds")
 
 # plot(ocean_interact~oceanSalmon,data=keogh)
 # plot(ocean_interact~seals,data=keogh)

@@ -19,7 +19,7 @@ spp_ord <- c(2,1,3,5,4)
 spp_ord_fact <- c("Dolly Varden","Steelhead","Cutthroat","Coho","Pink")
 
 
-keogh <- readRDS("Keogh_collinear_enviro.rds")
+keogh <- readRDS("Data/Keogh_collinear_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 keogh_long$Species <- factor(keogh_long$Species,levels=unique(keogh_long$Species))

@@ -8,7 +8,7 @@ library(MARSS)
 library(broom)
 library(wesanderson)
 library(grid)
-environ <- readRDS("environ_covars.rds")
+environ <- readRDS("Data/environ_covars.rds")
 environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
 environ$seal_abundance[environ$year>=2014 & is.na(environ$seal_abundance)] <- environ$seal_abundance[environ$year==2014]
 environ$seal_density[environ$year>=2014 & is.na(environ$seal_density)] <- environ$seal_density[environ$year==2014]
@@ -57,7 +57,7 @@ ggsave("Changing marine and freshwater environments.jpeg",plot=megaPlot,units="i
 
 # make plot of environment
 wesAnderson <- "Darjeeling1"
-keogh <- readRDS("Keogh_newRec_enviro.rds")
+keogh <- readRDS("Data/Keogh_newRec_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 keogh_long$Species <- factor(keogh_long$Species,levels=unique(keogh_long$Species))

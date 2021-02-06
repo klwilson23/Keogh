@@ -15,7 +15,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores(logical=FALSE))
 Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7')
 
-keogh <- readRDS("Keogh_collinear_enviro.rds")
+keogh <- readRDS("Data/Keogh_collinear_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 keogh_long$Species <- factor(keogh_long$Species,levels=unique(keogh_long$Species))

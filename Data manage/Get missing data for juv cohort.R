@@ -5,7 +5,7 @@ library(ggpubr)
 library(ggplot2)
 library(MARSS)
 library(broom)
-keogh <- readRDS("Keogh_newStock_enviro.rds")
+keogh <- readRDS("Data/Keogh_newStock_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
 keogh_long <- subset(keogh_long,Species!="Chum")
 
@@ -76,5 +76,5 @@ colnames(reJuv) <- colnames(keogh_juv)
 keogh_SR <- keogh_long[,!colnames(keogh_long)%in%"juvCohort"]
 keogh_new <- data.frame(keogh_SR,"juvCohort"=reJuv$juvCohort)
 plot(Stock/juvCohort~Year,data=keogh_new[keogh_new$Species=="Coho",])
-saveRDS(keogh_new,file="Keogh_newJuv_enviro.rds")
+saveRDS(keogh_new,file="Data/Keogh_newJuv_enviro.rds")
 

@@ -6,7 +6,7 @@ library(ggplot2)
 library(MARSS)
 library(broom)
 library(wesanderson)
-keogh <- readRDS("Keogh_newJuv_enviro.rds")
+keogh <- readRDS("Data/Keogh_newJuv_enviro.rds")
 
 keogh_long <- acast(sampSize,year~life_stage,value.var="number")
 wesAnderson <- "Darjeeling1"
@@ -164,4 +164,4 @@ p4 <- ggplot(data=keogh_long, aes(x=winRain, y=Recruits, color=Species))+
 megaPlot <- ggarrange(p1,p2,p3,p4,ncol=1,nrow=4,legend="top",common.legend=TRUE)
 megaPlot_Annotated <- annotate_figure(megaPlot,bottom=text_grob(wrapper("Relationships between salmon recruits and freshwater environment in the Keogh River.Summer season defined as April through October.Winter season defined as November through February of adjacent years.",width=125),color="black",hjust=0,x=0.01,face="italic",size=10))
 
-ggsave("recruits and environment in Keogh.jpeg",plot=megaPlot_Annotated,units="in",height=12,width=10,dpi=800)
+ggsave("Figures/recruits and environment in Keogh.jpeg",plot=megaPlot_Annotated,units="in",height=12,width=10,dpi=800)

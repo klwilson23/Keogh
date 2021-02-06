@@ -484,8 +484,8 @@ example$Species <- factor(example$Species,levels=c("Steelhead","Dolly Varden","C
 
 keogh_long <- example
 
-saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
-write.csv(keogh_StockRec,"Keogh_StockRecruitment.csv",row.names=F)
+saveRDS(keogh_SR,"Data/Keogh_stockRec_enviro.rds")
+write.csv(keogh_StockRec,"Data/Keogh_StockRecruitment.csv",row.names=F)
 
 refYear <- 1991
 pre89 <- keogh_StockRec[keogh_StockRec$Year<refYear,]

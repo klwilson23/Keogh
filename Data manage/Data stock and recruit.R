@@ -51,7 +51,7 @@ dv_smolt_lags_prop <- dv_smolt_lags_prop/sum(dv_smolt_lags_prop)
 ch_lag <- 4 # fixed 4 year life cycle for chum: Neave et al. 1952
 pink_lag <- 2 # fixed 2 year life cycle
 
-environ <- readRDS("environ_covars.rds")
+environ <- readRDS("Data/environ_covars.rds")
 environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
 environ$seal_abundance[environ$year>=2014 & is.na(environ$seal_abundance)] <- environ$seal_abundance[environ$year==2014]
 environ$seal_density[environ$year>=2014 & is.na(environ$seal_density)] <- environ$seal_density[environ$year==2014]
@@ -715,9 +715,9 @@ abline(ricker_early,col="dodgerblue")
 abline(ricker_late,col="orange")
 
 dev.off()
-saveRDS(keogh_SR,"Keogh_stockRec_enviro.rds")
-saveRDS(keogh_long,"Keogh_SR_enviro_long.rds")
-write.csv(keogh_long,"Keogh_StockRecruitment.csv",row.names=F)
+saveRDS(keogh_SR,"Data/Keogh_stockRec_enviro.rds")
+saveRDS(keogh_long,"Data/Keogh_SR_enviro_long.rds")
+write.csv(keogh_long,"Data/Keogh_StockRecruitment.csv",row.names=F)
 
 # keogh river adult run timing:
 
