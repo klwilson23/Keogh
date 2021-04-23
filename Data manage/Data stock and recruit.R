@@ -124,6 +124,12 @@ individuals <- steelhead_data[complete.cases(steelhead_data$sampAge,steelhead_da
 
 adult_life <- individuals[individuals$life_stage=="a"|individuals$life_stage=="k",]
 fresh_ocean_ages <- as.factor(paste(adult_life$age,adult_life$age_ocean,sep="|"))
+adult_life$age_total <- adult_life$age + adult_life$age_ocean
+age_str <- data.frame("numbers"=hist(adult_life$age_total,plot=F,breaks=c(0,1,2,3,4,5,6,7,8,9,10))$counts,"age"=
+hist(adult_life$age_total,plot=F,breaks=c(0,1,2,3,4,5,6,7,8,9,10))$mids)
+age_str$numbers[age_str$numbers==0] <- NA
+plot(log(numbers)~age,data=age_str)
+abline(lm(log(numbers)~age,data=age_str[age_str$age>=4,]))
 
 annual_age <- aggregate(number~smolt_year+hatch_year+species+life_stage+age,data=keogh,FUN=sum,na.rm=T)
 colnames(annual_age) <- c("Year","Hatch","Species","Stage","Age","Abundance")
