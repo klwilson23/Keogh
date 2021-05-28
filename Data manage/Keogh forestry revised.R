@@ -26,7 +26,7 @@ data1<- structure(list(SiteID = c("1", "2", "3", "4", "5", "6", "7",  "7", "8", 
 
 ## ---- Convert data: Change coordinates to UTM site dataset to the correct projection.
 ## ---- My data are UTM 9U and all the mapping layers 'm'.
-data2 <- data1  %>% select(UTM_W, UTM_N) #%>% mutate(UTM_W=as.numeric(UTM_W),UTM_N=as.numeric(UTM_N)) #
+data2 <- data1  %>% dplyr::select(UTM_W, UTM_N) #%>% mutate(UTM_W=as.numeric(UTM_W),UTM_N=as.numeric(UTM_N)) #
 sputm <- SpatialPoints(data2, proj4string=CRS("+proj=utm +zone=9U =+datum=WGS84"))
 spgeo <- spTransform(sputm, CRS("+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
 data_points <- data1 %>% mutate(lat=spgeo$UTM_N,lon=spgeo$UTM_W) %>%
@@ -57,19 +57,14 @@ rivers_in_plot_area <- bcdc_query_geodata("92344413-8035-4c08-b996-65a9b3f62fca"
 
 # Extract only the keogh river data from the plot box
 keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
-keogh_r <- rivers_in_plot_area %>%  filter(GNIS_NAME =="Keogh River")
 keogh_points <- data.frame(sf::st_coordinates(keogh_r))
-spTransform(keogh_points,CRS("+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
+#sp::spTransform(keogh_points,CRS("+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
 # load forestry data
 library(raster)
 str_name<-'~/Google Drive/SFU postdoc/Keogh river/BC_disturbance/logging_ageclass2012/logging_year.tif' 
 log_year <- raster(str_name)
 proj4string(log_year) <- CRS("+init=EPSG:3005")
-layout(1)
-plot(log_year)
-points(keogh_points,type="l",cex=3)
 logging_year <- data.frame(log_year@data@attributes[[1]])
-plot(logging_year$ID,logging_year$COUNT,xlim=c(1900,2020))
 log_max <- extract(log_year,             # raster layer
                    keogh_points[1,1:2],   # SPDF with centroids for buffer
                    buffer = 10000,     # buffer size, units depend on CRS
@@ -80,15 +75,13 @@ lu <- spPolygons( rbind(c(-180,-20), c(-160,5), c(-60, 0),
                         c(-160,-60), c(-180,-20)),rbind(c(80,0), 
                                                         c(100,60), c(120,0), c(120,-55), c(80,0)))
 lu <- SpatialPolygonsDataFrame(lu, data.frame(class=c("urban","ag")))
-raster::subset(log_year,log_year@data@attributes[[1]]$ID==log_max[1])
+#raster::subset(log_year,log_year@data@attributes[[1]]$ID==log_max[1])
 ext <- extent(keogh_r)
 ext@xmin <- ext@xmin-25000
 ext@xmax <- ext@xmax+25000
 ext@ymin <- ext@ymin-25000
 ext@ymax <- ext@ymax+1000
 new_rast <- crop(log_year,ext)
-plot(new_rast)
-points(keogh_points,type="p",cex=1)
 
 xscale <- (extent(log_year)@xmax-extent(log_year)@xmin)/log_year@ncols # meters per pixel
 yscale <- (extent(log_year)@ymax-extent(log_year)@ymin)/log_year@nrows # meters per pixel
@@ -112,3 +105,4 @@ plot(forestry$Year,forestry$cumul_footprint,type="l",lwd=2,xlab="Year",ylab="Cum
 abline(v=1991,lwd=2,lty=2,col="red")
 
 saveRDS(forestry,file="Data/keogh_logging.rds")
+

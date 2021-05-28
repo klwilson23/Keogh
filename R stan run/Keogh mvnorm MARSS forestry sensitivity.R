@@ -120,3 +120,12 @@ for(i in 1:length(lag_seq))
 }
 names(beta_logging) <- paste("lag time",lag_seq)
 saveRDS(beta_logging,file="Results/forestry lag sensitivity.rds")
+
+
+usdm::vifstep(as.data.frame(xx1))
+usdm::vifstep(as.data.frame(x1))
+usdm::vifstep(as.data.frame(x2))
+usdm::vifstep(as.data.frame(xx2))
+usdm::vifstep(as.data.frame(xx3))
+usdm::vifstep(as.data.frame(xx4))
+usdm::vifstep(as.data.frame(xx5))
