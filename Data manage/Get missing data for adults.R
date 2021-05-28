@@ -55,7 +55,7 @@ mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
 fit <- MARSS(adultDat, model=mod.list.dfa, control=list(minit=200,maxit=5000+200), inits=list(A=matrix(m,ns,1)))
 
-d <- augment(fit, interval = "confidence")
+d <- fitted(fit,interval="confidence")
 d$Year <- d$t + 1975
 spp <- matrix(unlist(strsplit(as.character(d$.rownames),".",fixed=TRUE)),ncol=2,byrow=TRUE)[,2]
 d$Species <- factor(spp,levels=c(levels(keogh_adults$Species),"Coho2"))

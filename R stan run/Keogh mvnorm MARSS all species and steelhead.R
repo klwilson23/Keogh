@@ -108,7 +108,7 @@ init_fx <- function(chain_id)
 
 fit <- stan(file="Stan code/Keogh mnorm MARSS and steelhead.stan",data=dat, iter=10000,chains=6,cores=6,control=list("adapt_delta"=0.99,"max_treedepth"=15),init=init_fx)
 intervals <- c(0.1,0.9)
-summary(fit,pars=c("beta","beta_steel","beta_dolly","beta_pink","beta_coho"),probs=intervals)$summary
+summary(fit,pars=c("beta","beta_steel","beta_cutt","beta_dolly","beta_pink","beta_coho"),probs=intervals)$summary
 summary(fit,pars=c("x0","s0","a0","r0"),probs=intervals)$summary
 summary(fit,pars=c("sigma_surv_pro","sigma_surv_obs","sigma_adult_pro","sigma_adult_obs","sigma_run_obs","sigma_run_pro"),probs=intervals)$summary
 summary(fit,pars=c("Sigma_proc","Sigma"),probs=intervals)$summary

@@ -6,7 +6,6 @@ library(reshape2)
 #vignette("weathercan", package = "weathercan")
 #vignette("glossary", package = "weathercan")
 
-stations[stations$station_name=="PortHardyA",]
 stations_search("Port Hardy",interval="day")
 stations_search(coords=c(50.67,-127.3),dist=50,interval="day")
 
