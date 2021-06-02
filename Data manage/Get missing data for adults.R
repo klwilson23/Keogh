@@ -3,6 +3,7 @@ library(reshape2)
 library(gridExtra)
 library(ggpubr)
 library(ggplot2)
+#devtools::install_version("MARSS", version = "3.10.12", repos = "http://cran.us.r-project.org")
 library(MARSS)
 library(broom)
 keogh <- readRDS("Data/Keogh_SR_enviro_new.rds")
@@ -55,7 +56,7 @@ mod.list.dfa = list(B = B, Z = Z, Q = Q, R = R, U = U, A = A, x0 = x0)
 m <- apply(adultDat, 1, mean, na.rm=TRUE)
 fit <- MARSS(adultDat, model=mod.list.dfa, control=list(minit=200,maxit=5000+200), inits=list(A=matrix(m,ns,1)))
 
-d <- fitted(fit,interval="confidence")
+d <- augment(fit, interval = "confidence")
 d$Year <- d$t + 1975
 spp <- matrix(unlist(strsplit(as.character(d$.rownames),".",fixed=TRUE)),ncol=2,byrow=TRUE)[,2]
 d$Species <- factor(spp,levels=c(levels(keogh_adults$Species),"Coho2"))
@@ -74,7 +75,6 @@ p <- ggplot(data = d) +
 p <- p + geom_point(data = yy, mapping = aes(x = Year, y = Abundance))
 p <- p + facet_wrap(~Species) + xlab("") + ylab("Standardized abundance")
 print(p)
-
 ggsave("Figures/Adult missing data.jpeg",plot=p,dpi=800,units="in",height=5,width=7)
 
 adultEst <- data.frame("Year"=adultNew$Year,adultFits)

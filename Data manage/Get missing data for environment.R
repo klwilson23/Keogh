@@ -50,7 +50,7 @@ for(i in 1:length(covarNames))
     m <- apply(covars, 1, mean, na.rm=TRUE)
     fit.dfa <- MARSS(covars, model = mod.list.dfa, control = list(maxit = 50000), inits = list(A = matrix(m, ns, 1)))
     
-    d <- fitted(fit.dfa,interval="confidence")
+    d <- augment(fit.dfa,interval="confidence")
     d$Year <- d$t + (min(years)-1)
     d$covars <- d$.rownames
     spp <- matrix(unlist(strsplit(as.character(d$.rownames),".",fixed=TRUE)),ncol=2,byrow=TRUE)[,2]

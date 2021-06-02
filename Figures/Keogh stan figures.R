@@ -14,10 +14,12 @@ library(corrplot)
 fit <- readRDS(file="~/Google Drive/SFU postdoc/Keogh river/Stan fits/keogh mvnorm covars.rds")
 ptSize <- 0.7
 txtSize <- 0.9
-target <- 0.8 # how much of the posterior mass are we okay being > or < 0 to draw inference
+target <- 0.80 # how much of the posterior mass are we okay being > or < 0 to draw inference
 spp_ord <- c(2,1,3,5,4)
 spp_ord_fact <- c("Dolly Varden","Steelhead","Cutthroat","Coho","Pink")
 
+color_grad <- colorRampPalette(c("darkred","white","darkred"))
+sig_colors <- color_grad(21)
 
 keogh <- readRDS("Data/Keogh_collinear_enviro.rds")
 keogh_long <- subset(keogh,Year<=2015 & Year>=1976)
@@ -213,7 +215,7 @@ for(k in spp_ord)
   Corner_text(unique(keogh_long$Species)[k],"topleft")
   if(k==spp_ord[5])
   {
-    legend("bottomleft",c("Early","Compensation","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=1.05*txtSize)
+    legend("bottomleft",c("Early","Compensatory","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=1.05*txtSize)
   }
 }
 axis(1,at=seq(from=0,to=dat$N,length=5),labels=seq(from=min(sh_annual$year)-1,to=max(sh_annual$year),length=5),tick=FALSE)
@@ -253,7 +255,7 @@ for(k in spp_ord)
   legend("topleft",paste("(a) - ",unique(keogh_long$Species)[k],sep=""),bty="n",cex=txtSize)
   if(k==spp_ord[4])
   {
-    legend("bottomright",c("Early","Compensation","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=txtSize)
+    legend("bottomright",c("Early","Compensatory","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=txtSize)
   }
 }
 mtext("Year",side=1,line=2.25,cex=0.8*txtSize)
@@ -271,9 +273,9 @@ mtext("Effect size",side=1,line=2.25,cex=0.7*txtSize)
 counter <- cov_ord
 for(k in spp_ord)
 {
-  xnames <- c("Cumulative logging","Summer air temperature","Summer rainfall","Winter air temperature","Winter rainfall","Pink salmon in FW","Fert.","Adult run time")
+  xnames <- c("Cumulative logging","Summer air temperature","Summer rainfall","Winter air temperature","Winter rainfall","Pink salmon in FW","Fertilization","Adult run time")
   if(k==1) { betas <- rstan::extract(fit)$beta_steel; xx <- data.frame(xx1,runtime);
-  xnames <- c("Cumulative logging","Rainfall after run","Temp. after run","Pink salmon in FW","Fert.","Spawn date")}
+  xnames <- c("Cumulative logging","Rainfall after run","Temp. after run","Pink salmon in FW","Fertilization","Spawn date")}
   if(k==2) { betas <- rstan::extract(fit)$beta_dolly; xx <- xx2}
   if(k==3) { betas <- rstan::extract(fit)$beta_cutt; xx <- xx3}
   if(k==4) { betas <- rstan::extract(fit)$beta_pink; xx <- xx4;
@@ -286,16 +288,18 @@ for(k in spp_ord)
     segments(x0=quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[1]),x1=quantile(betas[,j]/sd(dat$y[,k]),probs=intervals[2]),y0=counter,lwd=2,xpd=NA)
     axis(2,at=counter,labels=xnames[j],tick=FALSE,las=1,line=0, cex.axis=0.9*txtSize)
     ifelse((sum((betas[,j]/sd(dat$y[,k]))>0)/length(betas[,j])>target) | (sum((betas[,j]/sd(dat$y[,k]))<0)/length(betas[,j])>target),pch_color <- "red",pch_color<-"grey50")
-    points(mean(betas[,j])/sd(dat$y[,k]),counter,pch=21,bg=pch_color,xpd=NA)
+    pch_color <- 1+round(round(sum(betas[,j]>0)/length(betas[,j])/5,2)*5*20)
+    
+    points(mean(betas[,j])/sd(dat$y[,k]),counter,pch=21,bg=sig_colors[pch_color],xpd=NA)
     counter <- counter - 1
   } 
 }
-
+par(xpd=NA)
 colFun <- colorRampPalette(c("tomato","orange","dodgerblue","darkblue"))
-corrplot.mixed(r,upper="ellipse",lower.col="black",tl.col="black",upper.col = colFun(100),tl.cex =0.7*txtSize,mar=c(0,0,3,0.05))
+corrplot.mixed(r,upper="ellipse",lower.col="black",tl.col="black",upper.col = colFun(100),tl.cex =0.7*txtSize,mar=c(0,0,5,0.05))
 text("(c) - Species correlations",x=1,y=5.75,xpd=NA,cex=txtSize)
 dev.off()
-
+par(xpd=F)
 
 # recruitment
 jpeg("Figures/Keogh recruitment stan marss.jpeg",width=8,height=8,units="in",res=800)
@@ -317,6 +321,7 @@ for(k in spp_ord)
 dev.off()
 
 pdf("Figures/Keogh regression stan marss.pdf",width=5.5,height=8)
+perc_change <- array(NA,dim=c(length(spp_ord),max(ncol(xx1)+1,ncol(xx2),ncol(xx3),ncol(xx4),ncol(xx5)),3))
 ppd <- rstan::extract(fit)$x0
 mns <- apply(ppd,c(3,2),mean)
 ci <- apply(ppd,c(3,2),quantile,probs=intervals)
@@ -350,10 +355,19 @@ for(k in spp_ord)
     polygon(c(covar_seq,rev(covar_seq)),c(ci[1,],rev(ci[2,])),col=adjustcolor("dodgerblue",0.3),border=NA)
     points(xx[,j],colMeans(resid_alphas),pch=21,bg="grey50")
     Corner_text(unique(keogh_long$Species)[k],"topleft")
+    covar_seq <- c(xx[1,j],xx[40,j])
+    regress <- sapply(covar_seq,function(x){x*betas[,j]})
+    delta_change <- exp(colMeans(regress))
+    #delta_change <- exp(colMeans(resid_alphas))
+    perc_change[k,j,1] <- 100*((delta_change[length(delta_change)]-delta_change[1])/delta_change[1])
+    perc_change[k,j,2:3] <- quantile(apply(exp(regress),1,function(x){100*((x[2]-x[1])/x[1])}),probs=intervals)
   }
 }
 dev.off()
 
+dimnames(perc_change)[1] <- list("Species"=unique(keogh_long$Species))
+dimnames(perc_change)[3] <- list("Intervals"=c("Mean","LI","UI"))
+dimnames(perc_change)[2] <- list("Environment"=c("Logging",rep("None",7)))
 pdf("Figures/Keogh survival regression stan marss.pdf",width=5.5,height=5.5)
 ppd <- rstan::extract(fit)$s0
 ci <- apply(ppd,2,quantile,probs=intervals)
@@ -421,8 +435,8 @@ lines(colMeans(ppd),lwd=2)
 ppx <- rstan::extract(fit)$y1
 ci <- apply((1/(1+exp(-ppx))),2,quantile,probs=intervals)
 segments(x0=1:ncol(ppx),y0=ci[1,],y1=ci[2,],lwd=2,col="black")
-points(colMeans(1/(1+exp(-ppx))),pch=21,bg="grey50")
-legend("topright",c("Early","Compensation","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=1.2*txtSize)
+points(colMeans(1/(1+exp(-ppx))),pch=21,bg="grey70")
+legend("topright",c("Early","Compensatory","Decline"),title="Regime",pch=22,pt.bg=c(adjustcolor("orange",0.5),adjustcolor("dodgerblue",0.5),adjustcolor("darkblue",0.5)),bty="n",cex=1.2*txtSize)
 Corner_text("(a)","topleft")
 # some effects on survival
 
@@ -430,14 +444,15 @@ betas <- rstan::extract(fit)$beta_surv
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y1_obs)
 colnames(std_eff) <- c("Ocean interactions","NPGO","Ocean PCA-2")
 #pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
-pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
+pch_color <- apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})
+pch_color <- 1+round(round(pch_color/5,2)*5*20)
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
 axis(2,line=0)
 mtext("Effect size",side=2,cex=0.8*txtSize,line=2)
 segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
-points(std_eff[2,],pch=21,bg=pch_color,cex=1.5)
+points(std_eff[2,],pch=21,bg=sig_colors[pch_color],cex=1.5)
 abline(h=0,lwd=1,lty=5)
 Corner_text("(b)","topleft")
 
@@ -452,7 +467,7 @@ polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adju
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
 polygon(c(regime2:40,rev(regime2:40)),c(ci[1,regime2:40],rev(ci[2,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
 lines(colMed,lwd=2)
-points(sh_annual$Stock,pch=21,bg="grey50")
+points(sh_annual$Stock,pch=21,bg="grey70")
 Corner_text("(c)","topleft")
 
 # some effects on adult abundance
@@ -461,13 +476,15 @@ std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),qu
 colnames(std_eff) <- c("Marine survival","Smolt cohort")
 #pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
 pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
+pch_color <- apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})
+pch_color <- 1+round(round(pch_color/5,2)*5*20)
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
 axis(2,line=0)
 mtext("Effect size",side=2,cex=0.8*txtSize,line=2)
 segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
-points(std_eff[2,],pch=21,bg=pch_color,cex=1.5)
+points(std_eff[2,],pch=21,bg=sig_colors[pch_color],cex=1.5)
 abline(h=0,lwd=1,lty=5)
 Corner_text("(d)","topleft")
 
@@ -481,21 +498,23 @@ polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adju
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
 polygon(c(regime2:40,rev(regime2:40)),c(ci[1,regime2:40],rev(ci[2,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
 lines(colMeans(ppd),lwd=2)
-points(dat$y2,pch=21,bg="grey50")
+points(dat$y2,pch=21,bg="grey70")
 Corner_text("(e)","topleft")
 
 # some effects on run time
 betas <- rstan::extract(fit)$beta_run
 std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),quantile(x,probs=intervals[2]))})/sd(dat$y2)
-colnames(std_eff) <- c("ln(Adults)","Rainfall","Temp.")
+colnames(std_eff) <- c("ln(Adults)","Rainfall","Temperature")
 pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
+pch_color <- apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})
+pch_color <- 1+round(round(pch_color/5,2)*5*20)
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=txtSize)
 axis(2,line=0)
 mtext("Effect size",side=2,cex=0.8*txtSize,line=2)
 segments(x0=1:3,y0=std_eff[1,],y1=std_eff[3,],lwd=2)
-points(std_eff[2,],pch=21,bg=pch_color,cex=1.5)
+points(std_eff[2,],pch=21,bg=sig_colors[pch_color],cex=1.5)
 abline(h=0,lwd=1,lty=5)
 Corner_text("(f)","topleft")
 
@@ -521,7 +540,7 @@ polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adju
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
 polygon(c(regime2:40,rev(regime2:40)),c(ci[1,regime2:40],rev(ci[2,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
 lines(colMeans(resid_alphas),lwd=2)
-points(dat$y[,k]-colMeans(dens_ind),pch=21,bg="grey50")
+points(dat$y[,k]-colMeans(dens_ind),pch=21,bg="grey70")
 Corner_text("(g)","topleft")
 
 # some effects on productivity
@@ -531,6 +550,8 @@ std_eff <- apply(betas,2,function(x){c(quantile(x,probs=intervals[1]),mean(x),qu
 colnames(std_eff) <- c("Logging","Rainfall","Temp.","Pinks","Fert.","Spawn date")
 #pch_color <- ifelse(apply(std_eff,2,FUN=function(x){(x[1]*x[3])>0}),"red","grey50")
 pch_color <- ifelse((apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})>target) | (apply(betas,2,FUN=function(x){sum(x<0)/nrow(betas)})>target),"red","grey50")
+pch_color <- apply(betas,2,FUN=function(x){sum(x>0)/nrow(betas)})
+pch_color <- 1+round(round(pch_color/5,2)*5*20)
 
 plot(std_eff[2,],ylim=1.1*range(c(0,std_eff)),xaxt="n",xlim=range(0.5:(ncol(std_eff)+0.5)),yaxt="n",ylab="",col=0,xlab="")
 #axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=0.7*txtSize)
@@ -538,7 +559,7 @@ axis(1,at=1:ncol(std_eff),labels=colnames(std_eff),cex.axis=0.9*txtSize)
 axis(2,line=0)
 mtext("Effect size",side=2,cex=0.85*txtSize,line=2)
 segments(x0=1:length(colnames(std_eff)),y0=std_eff[1,],y1=std_eff[3,],lwd=2)
-points(std_eff[2,],pch=21,bg=pch_color,cex=1.5)
+points(std_eff[2,],pch=21,bg=sig_colors[pch_color],cex=1.5)
 abline(h=0,lwd=1,lty=5)
 Corner_text("(h)","topleft")
 
@@ -553,7 +574,7 @@ polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adju
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
 polygon(c(regime2:40,rev(regime2:40)),c(ci[1,regime2:40],rev(ci[2,regime2:40])),col=adjustcolor("darkblue",0.5),border=NA)
 lines(colMeans(ppd),lwd=2)
-points(sh_annual$Recruits,pch=21,bg="grey50")
+points(sh_annual$Recruits,pch=21,bg="grey70")
 Corner_text("(i)","topleft")
 
 # some effects on recruitment
