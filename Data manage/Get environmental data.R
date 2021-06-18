@@ -42,7 +42,7 @@ climate$year <- as.numeric(as.character(climate$year))
 climate <- subset(climate,climate$year!=2019)
 
 environment <- read.csv("Data/keogh environmental covariates.csv",header=TRUE)
-
+apply(environment,2,function(x){((x[66]/x[27]))})
 environ_covars <- merge(environment,climate,by="year")
 environ_covars <- merge(environment[,!colnames(environment)%in%c("precip_1","precip_2","precip_3","precip_4","temp_2","temp_3","temp_4")],climate,by="year")
 
