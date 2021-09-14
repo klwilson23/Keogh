@@ -426,7 +426,7 @@ par(oma=c(2.5,1,0.05,0.05),mai=c(0.1,0.35,0.1,0.05),mgp=c(2,0.4,0))
 ppd <- rstan::extract(fit)$y1_ppd
 ci <- apply(ppd,2,quantile,probs=intervals)
 plot(colMeans(ppd),ylim=range(ci,quantile(1/(1+exp(-rstan::extract(fit)$y1_miss)),probs=intervals)),type="l",lwd=2,xlab="",ylab="",xaxt="n")
-mtext("Marine survival (yr-1)",2,line=2,xpd=NA,cex=0.8*txtSize)
+mtext("Marine survival",2,line=2,xpd=NA,cex=0.8*txtSize)
 axis(1,tick=TRUE,labels=FALSE)
 polygon(c(1:regime,rev(1:regime)),c(ci[1,1:regime],rev(ci[2,1:regime])),col=adjustcolor("orange",0.5),border=NA)
 polygon(c(regime:regime2,rev(regime:regime2)),c(ci[1,regime:regime2],rev(ci[2,regime:regime2])),col=adjustcolor("dodgerblue",0.5),border=NA)
