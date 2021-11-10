@@ -14,7 +14,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores(logical=FALSE))
 Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7')
 
-keogh <- readRDS("Keogh_newJuv_enviro.rds")
+keogh <- readRDS("Data/Keogh_newJuv_enviro.rds")
 run_time <- readRDS("Data/steelhead_run.rds")
 sh_annual <- readRDS("Data/steelhead_run_annual.rds")
 sh_annual$time <- 1:length(sh_annual$year)
@@ -106,7 +106,33 @@ plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
 polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
 points(sh_annual$Recruits,pch=21,bg="orange")
 
-loo_compare(loo(fit),loo(fit2))
+fit3 <- stan(file="Stan code/dlm_both.stan",data=dat, iter=10000,chains=4,cores=4,control=list("adapt_delta"=0.99))
+
+summary(fit3,pars=c("x0","beta","sigma_process"),probs=c(0.1,0.9))$summary
+predictions <- extract(fit3)$pred
+ci <- apply(predictions,2,quantile,probs=c(0.05,0.95))
+plot(colMeans(predictions),ylim=range(predictions),type="l",lwd=2)
+polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(dat$y,pch=21,bg="orange")
+
+xs <- extract(fit3)$x0
+ci <- apply(xs,2,quantile,probs=c(0.05,0.95))
+plot(colMeans(xs),ylim=range(c(0,ci)),type="l",lwd=2)
+polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+
+ppd <- extract(fit3)$y_ppd
+ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
+plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
+polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(dat$y,pch=21,bg="orange")
+
+ppd <- extract(fit3)$R
+ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
+plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
+polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(sh_annual$Recruits,pch=21,bg="orange")
+
+loo_compare(loo(fit),loo(fit2),loo(fit3))
 
 post <- extract(fit2)
 K <- sapply(1:nrow(post$x0),function(x){-post$x0[x,]/post$beta[x]})
