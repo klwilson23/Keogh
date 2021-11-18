@@ -132,7 +132,13 @@ plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
 polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
 points(sh_annual$Recruits,pch=21,bg="orange")
 
-loo_compare(loo(fit),loo(fit2),loo(fit3))
+
+md1 <- loo(fit)
+md2 <- loo(fit2)
+md3 <- loo(fit3)
+loo_compare(md1,md2,md3)
+x <- cbind(md1$pointwise[, "elpd_loo"], md2$pointwise[, "elpd_loo"],md3$pointwise[, "elpd_loo"])
+loo::stacking_weights(x)
 
 post <- extract(fit2)
 K <- sapply(1:nrow(post$x0),function(x){-post$x0[x,]/post$beta[x]})
