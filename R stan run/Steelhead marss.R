@@ -100,12 +100,6 @@ plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
 polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
 points(dat$y,pch=21,bg="orange")
 
-ppd <- extract(fit2)$R
-ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
-plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
-polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
-points(sh_annual$Recruits,pch=21,bg="orange")
-
 fit3 <- stan(file="Stan code/dlm_both.stan",data=dat, iter=10000,chains=4,cores=4,control=list("adapt_delta"=0.99))
 
 summary(fit3,pars=c("x0","beta","sigma_process"),probs=c(0.1,0.9))$summary
@@ -131,6 +125,26 @@ ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
 plot(colMeans(ppd),ylim=range(ci),type="l",lwd=2)
 polygon(c(1:dat$N,rev(1:dat$N)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
 points(sh_annual$Recruits,pch=21,bg="orange")
+
+layout(matrix(1:3,nrow=3))
+par(mar=c(3,4,0.5,0.5))
+ppd <- extract(fit2)$R
+ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
+plot(1976:2015,colMeans(ppd),ylim=c(0,20000),type="l",lwd=2,xlab="",ylab="Smolts")
+polygon(c(1976:2015,rev(1976:2015)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(1976:2015,sh_annual$Recruits,pch=21,bg="orange")
+
+ppd <- extract(fit)$R
+ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
+plot(1976:2015,colMeans(ppd),ylim=c(0,20000),type="l",lwd=2,xlab="",ylab="Smolts")
+polygon(c(1976:2015,rev(1976:2015)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(1976:2015,sh_annual$Recruits,pch=21,bg="orange")
+
+ppd <- extract(fit3)$R
+ci <- apply(ppd,2,quantile,probs=c(0.05,0.95))
+plot(1976:2015,colMeans(ppd),ylim=c(0,20000),type="l",lwd=2,xlab="Year",ylab="Smolts")
+polygon(c(1976:2015,rev(1976:2015)),c(ci[1,],rev(ci[2,])),col=adjustcolor("grey50",0.5))
+points(1976:2015,sh_annual$Recruits,pch=21,bg="orange")
 
 
 md1 <- loo(fit)
@@ -165,7 +179,7 @@ for(i in 1:dat$N)
 {
   points(dat$x[i],dat$y[i],pch=21,bg="orange")
   curve(log(mean(alphas[i]))+beta*x,add=TRUE)
-  Sys.sleep(1)
+  Sys.sleep(0.5)
 }
 # all models
 dat <- list("N"=nrow(x1),
